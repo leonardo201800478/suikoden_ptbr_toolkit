@@ -119,7 +119,7 @@ def extract_textasset_json(
     except json.JSONDecodeError as exc:
         raise ValueError("UnityDataTool não retornou JSON válido para objectlist.") from exc
     if not isinstance(objects, list):
-        raise ValueError("O objectlist retornado pelo UnityDataTool não é uma lista.")
+        raise TypeError("O objectlist retornado pelo UnityDataTool não é uma lista.")
 
     textassets = [
         obj for obj in objects

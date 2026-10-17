@@ -617,9 +617,13 @@ class TranslationApp:
 
         errors: list[dict[str, str]] = []
         results: list[dict[str, Any]] = []
+        log_path = ""
         for item in batch:
             if "batch_errors" in item:
                 errors.extend(item["batch_errors"])
+                log_path = item.get("log_path", log_path)
+            elif "log_path" in item and "source" not in item:
+                log_path = item["log_path"]
             else:
                 results.append(item)
 

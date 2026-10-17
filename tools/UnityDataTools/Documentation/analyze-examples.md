@@ -1,0 +1,388 @@
+# Example usage of Analyze
+
+This topic gives some examples of using the SQLite output of the UnityDataTools Analyze command.
+
+The command line arguments to invoke Analyze are documented [here](command-analyze.md).
+
+The definition of the views is in the [Analyzer Database Schema](analyzer-schema.md); internal details about how Analyze is implemented are in the [Analyzer documentation](analyzer.md).
+
+Queries specific to ContentDirectory builds and `ContentLayout.json` are collected on a dedicated page: [Example queries for ContentDirectory builds](analyze-examples-contentlayout.md).
+
+## Running Queries from the Command line
+
+You can find data in the SQLite database by running SQL queries.
+
+Graphical tools such as "DB Browser" offer a way to run these queries directly from the UI based on whatever database you have open.
+
+However often it is useful to run queries from the command line, and to incorporate queries into your scripts (bash, PowerShell, etc).  Some of the example on this page show the command line syntax for running simple queries.
+
+These examples assume you have `sqlite3` available in the path for your command prompt or terminal. On Windows that means that a directory containing `sqlite3.exe` is included in your PATH environmental variable.
+
+On Windows, sqlite3.exe is available as part of the "SQLite command line tools", published from [www.sqlite.org](https://www.sqlite.org).
+
+Note: Many of the examples in this topic assume that your database file is named `Analysis.db` in your current working directory.  
+
+Disclaimer: The command line examples and scripts will need to be modified for your specific needs, and may need to be rewritten for your platform and preferred command line environment.  It is a best practice to only run commands that you fully understand from a command prompt.
+
+## Example: Object count
+
+Starting things simple: running the following command on a command prompt will invoke a query will print the total number of objects in the build.
+
+```
+sqlite3 Analysis.db "SELECT COUNT(*) FROM objects;"
+```
+
+## Example: Shader information
+
+shader_view has a lot of useful information about shaders.  For example to see the list of keywords for a particular shader, try the following command.  This should work with both Powershell and Bash:
+```
+sqlite3 Analysis.db ".mode column" "SELECT keywords FROM shader_view WHERE name = 'Sprites/Default';"
+```
+
+Example output:
+
+```
+keywords
+-------------------
+PIXELSNAP_ON,
+INSTANCING_ON,
+ETC1_EXTERNAL_ALPHA
+```
+
+Another example query is the top 5 shaders by size.
+
+```
+sqlite3 Analysis.db ".mode column" "SELECT name, pretty_size, serialized_file FROM shader_view ORDER BY size DESC LIMIT 5;"
+```
+
+Example output (based on a build of the [megacity-metro](https://github.com/Unity-Technologies/megacity-metro) project):
+```
+name                                        pretty_size  serialized_file
+------------------------------------------  -----------  --------------------------------
+TextMeshPro/Mobile/Distance Field           191.5 KB     resources.assets
+Hidden/Universal Render Pipeline/UberPost   144.3 KB     globalgamemanagers.assets
+Shader Graphs/CustomLightingBuildingsB_LOD  139.6 KB     1b2fdfe013c58ffd57d7663eb8db3e60
+Universal Render Pipeline/Lit               115.5 KB     1b2fdfe013c58ffd57d7663eb8db3e60
+Shader Graphs/CustomLightingBuildingsB      113.4 KB     1b2fdfe013c58ffd57d7663eb8db3e60
+```
+
+## BuildReport support
+
+See [buildreport.md](buildreport.md) for information about using analyze to look at BuildReport files.
+
+Example queries against build report data — build summary, size by type, and objects grouped by source asset, file extension, or build file — are collected on a dedicated page: [Example queries for Player build reports](analyze-examples-buildreport.md).
+
+
+
+## Example: Using AI tools to help write queries
+
+AI tools are a good fit for the analyze database, whether that is an AI agent running `analyze` and
+querying the result itself, or a chat AI helping you write SQL. The recommended workflow, the schema
+facts worth knowing up front, and tips for providing schema context to chat-based tools are collected
+in [Using UnityDataTool with an AI Agent](agent-guide.md).
+
+## Example: Finding AssetBundles containing a certain object type
+
+If you want to find out which AssetBundles in a build contain a certain object type you can try a query like this:
+
+```
+sqlite3 Analysis.db "SELECT DISTINCT archive FROM object_view WHERE type = 'MonoBehaviour';"
+```
+
+The above query takes advantage of the object_view which pulls together the data from multiple tables.  The following query does exactly the same thing, but uses the underlying tables directly: 
+
+```
+sqlite3 Analysis.db "SELECT DISTINCT ab.name AS archive FROM objects o INNER JOIN types t ON o.type = t.id INNER JOIN serialized_files sf ON o.serialized_file = sf.id LEFT JOIN archives ab ON sf.archive = ab.id WHERE t.name = 'MonoBehaviour';"
+```
+
+Note: Both MonoBehaviours and ScriptableObjects have the same serialized type "MonoBehaviour".
+
+
+## Example: Finding instances of a scripting class
+
+The previous example shows how to find all MonoBehaviours and ScriptableObjects.  But you may want to filter this based on the actual scripting class.  This is a bit more involved than the previous examples, so lets first breakdown the approach.
+
+The serialized data for scripting class does not directly store the class name, instead it stores a reference to a MonoScript.  The MonoScript in turn records the assembly, namespace and classname.
+
+This is an example MonoScript from a `UnityDataTool dump` of a Serialized File:
+
+```
+ID: -5763254701832525334 (ClassID: 115) MonoScript
+  m_Name (string) SpriteSkin
+  m_ExecutionOrder (int) 0
+  m_PropertiesHash (Hash128) 4ce2fab3c132c26713e5cd3f58f2e229
+  m_ClassName (string) SpriteSkin
+  m_Namespace (string) UnityEngine.U2D.Animation
+  m_AssemblyName (string) Unity.2D.Animation.Runtime
+```
+
+UnityDataTool extracts MonoScript information into the `monoscripts` table and `monoscript_view`, which provide the class name, namespace, and assembly name for each script. This makes it easy to list all scripting classes in the build:
+
+```
+SELECT class_name, namespace, assembly_name FROM monoscript_view;
+```
+
+The actual scripting objects of that type may be spread all through your AssetBundles (or Player build).  To find them we need to make use of the `refs` table, which records the references from each object to other objects.  If we find each MonoBehaviour object that references the MonoScript with the desired class name then we have found all instances of that class.
+
+The `script_object_view` provides a convenient way to query MonoBehaviour objects along with their associated script information. This view joins MonoBehaviour objects with their referenced MonoScript, bringing the class_name, namespace, and assembly_name into each row.
+
+For example, to search for all instances of the class SpriteSkin in the UnityEngine.U2D.Animation namespace, you can simply query:
+
+```
+SELECT archive, serialized_file, name, object_id, class_name, namespace, assembly_name
+FROM script_object_view
+WHERE class_name = 'SpriteSkin'
+  AND namespace = 'UnityEngine.U2D.Animation';
+```
+
+If the class name is unique in your project, you can simplify the query by omitting the namespace filter:
+
+```
+SELECT archive, serialized_file, name, object_id, class_name, namespace
+FROM script_object_view
+WHERE class_name = 'SpriteSkin';
+```
+
+Alternatively, you can write the query manually using the underlying tables:
+
+```
+SELECT mb.archive, mb.serialized_file, mb.name, mb.object_id
+FROM object_view mb
+INNER JOIN refs_view r ON mb.id = r.object
+INNER JOIN monoscript_view ms ON r.referenced_object = ms.id
+WHERE mb.type = 'MonoBehaviour'
+  AND r.property_type = 'MonoScript'
+  AND ms.class_name = 'SpriteSkin'
+  AND ms.namespace = 'UnityEngine.U2D.Animation';
+```
+
+## Example: Finding SerializeReference types
+
+A field marked with `[SerializeReference]` stores a C# object inside the MonoBehaviour or
+ScriptableObject that holds the field. There is no MonoScript for the object's type. Instead, the
+type's class, namespace and assembly are written into every object that holds an instance. This makes
+the types hard to find in built content, so analyze collects every instance into the
+[`managed_references`](analyzer-schema.md#managed_references) table.
+
+For example, before you rename a class, you can check that no content built with the old name remains:
+
+```
+SELECT archive, serialized_file, name, object_id, class_name, namespace, assembly_name, rid
+FROM managed_reference_view
+WHERE class_name = 'MyOldClassName';
+```
+
+A nested class is recorded as `Outer/Inner`, so use `LIKE '%/MyOldClassName'` to find it without
+the outer class name.
+
+To see every type used, how often, and how many bytes its instances take:
+
+```
+SELECT * FROM managed_reference_stats_view;
+```
+
+`managed_reference_view` shows the name of the holding object, but not its own C# class. The C#
+class comes from `script_object_view`, which is populated only when analyze runs without
+`--skip-references`. Join the two views on `id` to see both:
+
+```
+SELECT so.class_name AS script_class, so.name, mr.class_name, mr.namespace, mr.rid, mr.size
+FROM managed_reference_view mr
+INNER JOIN script_object_view so ON mr.id = so.id
+ORDER BY so.class_name, mr.class_name;
+```
+
+## Example: Quick summary for individual AssetBundles
+
+Often Analyze is used for an entire build output, so that you can view information about the build output as a whole.
+However it can also be used in a more light weight fashion for quickly printing information about a specific AssetBundle.
+Typically the time to run analyze on a single file should be very fast, so it can be acceptable to use a temporary database and
+erase it immediately after that.
+
+This is an example if you want to look at an AssetBundle called sprites.bundle in the current working directory.
+
+```
+UnityDataTool analyze . -o sprites.bundle.db -p sprites.bundle
+sqlite3 .\sprites.bundle.db ".mode column" "SELECT object_id, type, name, pretty_size, crc32 from object_view"
+```
+
+After running this sprites.bundle.db is not needed anymore, and could be erased (e.g. using a platform/shell appropriate command like "del" or "rm").
+
+The following is an example PowerShell script that generalizes the idea:
+
+```
+# PowerShell Script to run UnityDataTool on a single AssetBundle (or single SerializedFile) and print out a summary of the objects.
+
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$FileName
+)
+
+if (-not (Test-Path -Path $FileName)) {
+    Write-Error "File '$FileName' does not exist."
+    exit 1
+}
+
+#Query to run on the temporary analyze database
+$select_statement = "SELECT object_id, type, name, pretty_size, crc32 from object_view"
+
+# Separate the directory and file name
+$FileDir = Split-Path -Path $FileName -Parent
+$FileLeaf = Split-Path -Path $FileName -Leaf
+
+# If no directory is detected (relative file name), use the current working directory
+if (-not $FileDir) {
+    $FileDir = "."
+}
+
+# Retrieve the system's temp folder and create the temporary database file name
+$tempFolder = $env:TEMP
+$dbName = Join-Path -Path $tempFolder -ChildPath ("$FileLeaf.db")
+
+try {
+    # Run UnityDataTool
+    UnityDataTool analyze $FileDir -o $dbName -p $FileLeaf
+
+    # Query the database using sqlite3
+    sqlite3 $dbName ".mode column" $select_statement
+
+    # Delete the temporary database file
+    Remove-Item $dbName -Force
+} catch {
+    Write-Error "An error occurred: $_"
+}
+```
+
+Here is an example output from the script above (where the script has been saved as `objectlist.ps1` somewhere in the Path):
+
+```
+>objectlist.ps1 .\AssetBundles\sprites.bundle
+
+...
+
+object_id             type         name            pretty_size  crc32
+--------------------  -----------  --------------  -----------  ----------
+-3600607445234681765  Texture2D    red             148.5 KB     3115177070
+-2408881041259534328  Sprite       Snow            460.0 B      2324949527
+-1350043613627603771  Texture2D    Snow            512.2 KB     3894005184
+1                     AssetBundle  sprites.bundle  332.0 B      2353941696
+3866367853307903194   Sprite       red             460.0 B      1811343945
+```
+
+## Example: Finding differences between two builds
+
+This is a large subject, see [Comparing Builds](comparing-builds.md).
+
+## Example: Matching content back to the source asset
+
+UnityDataTool works on the output of a Unity build, which, by its very nature, only contains the crucial data needed to efficiently load built content in the Player.  It does not include complete information about the assets and scenes in the project that was used to create that build.  You may want to match content back to the original source asset or scene.  For example if the size of an AssetBundle has unexpectedly changed between builds then you may want to track down which source assets could be responsible for that change.  Or you may want to confirm that some particular image has been included in the build.
+
+For AssetBundles partial asset information can be found in the m_Containers list, inside the AssetBundle object.  This records assets that were explicitly added to AssetBundles.  In the database this can be found in the `assetbundle_assets` table.  However, assets that are included in the build implicitly (because they are referenced from the explicitly added assets) will not be recorded anywhere in the AssetBundle content. 
+
+For a player build the `assetbundle_assets` table is empty (player builds don’t contain an AssetBundle object), and the paths of assets in the sharedassets files are not recorded anywhere in the build output.
+
+In many cases the source asset can be inferred based on your specific knowledge of your project, and how the build was configured.  For example the level files in a Player build match the Scenes in the Build Profile Scene list.  And the content of AssetBundles is driven from the assignment of specific assets to those AssetBundles (or Addressable groups), along with assets they depend on.
+
+Also, in many cases the name of objects matches the file name of the asset.  For example the Texture2D "red" object probably comes from a file named red.png somewhere in the project.  
+
+Similarly, it may be possible to find an object based on a distinctive property values, such as a string or hash, by doing text-based searches in the output from the `dump` command.
+
+For more precise information about how Source Assets contribute to the build result it may be better to consult files that are produced during the build process, instead of UnityDataTools.
+
+Examples of alternative sources of build information:
+
+* The [BuildReport](https://docs.unity3d.com/ScriptReference/Build.Reporting.BuildReport.html) has detailed source information in the PackedAssets section.  The [BuildReportInspector](https://github.com/Unity-Technologies/BuildReportInspector) is a useful way to view data from the BuildReport.
+* The Editor log reports a lot of information during a build. 
+* Regular AssetBundle builds create [.manifest files](https://docs.unity3d.com/Manual/assetbundles-file-format.html), which contain information about the source assets and types.
+* Addressable builds do not produce BuildReport files, nor .manifest files. But UnityDataTools supports analyzing the [Addressables Build Reports](addressables-build-reports.md) and will populate the `addressables_build_explicit_assets` and `addressables_build_data_from_other_assets` tables.
+
+## Example: Local Addressable groups depending on remote groups
+
+A common scenario when working with remote content, is to add a new piece of content to a local Addressable group that depends upon content in a remote Addressable group. Often this is fine, but if it's unexpected it can lead to the game stalling while downloading a large quantity of remote content. This example prints out content in local Addressable groups that depend upon content in remote groups.
+
+UnityDataTools does **not** store a boolean “local” or “remote” flag. Each bundle row has a **`load_path`** string (table `addressables_build_bundles`). You can classify bundles for a given project by testing that string—for example:
+
+* **Remote bundle:** `load_path` starts with `https://` or `http://` (typical for remote profiles).
+* **Local bundle:** not matched by the above (often paths containing `{UnityEngine.AddressableAssets.Addressables.RuntimePath}` or similar). You may refine this for your naming or add conditions such as non-empty `load_path` if you need to exclude odd rows.
+
+In this case, we want to know about both explicitly referenced assets and implicitly referenced assets. Explicitly referenced assets are assets that you have directly linked in another bundle, while implicitly referenced assets are dependencies of your source asset. For example, a prefab in a local group may explicitly reference a material in a remote group.
+
+**1. Produce a database from your build reports** (adjust paths; on Windows use backslashes or quoted paths):
+
+```
+UnityDataTool analyze "C:\YourProject\Library\com.unity.addressables\BuildReports" -o addressables_analysis.db
+```
+
+**2. Find the `build_id`** for the report you care about (often the latest row):
+
+```
+sqlite3 addressables_analysis.db "SELECT id, name, start_time FROM addressables_builds ORDER BY id DESC LIMIT 5;"
+```
+
+Use that `id` as `:build_id` in the query below.
+
+**3. List explicit assets in a local bundle that reference an explicit asset in a remote bundle**
+
+The following uses a `UNION ALL` of the two explicit-explicit edge tables. Bundle `load_path` values are joined only so the `WHERE` clause can classify local vs remote bundles; they are not selected in the result. Column aliases **`local_*`** refer to the asset in the locally classified bundle (the referencing side), and **`remote_*`** to the depended-on asset in the remotely classified bundle. The **`dependency_type`** column uses short labels aligned with typical Addressables UI wording: **`explicit`** for edges from **ExternallyReferencedAssets**, and **`implicit`** for edges from **InternalReferencedExplicitAssets**. In both cases the dependency is still between **explicit addressables** in the build layout; non-addressable “other” assets are modeled separately in `addressables_build_explicit_asset_internal_referenced_other_assets` / `addressables_build_data_from_other_assets`.
+
+```sql
+SELECT
+  'explicit' AS dependency_type,
+  src.addressable_name AS local_address,
+  src.asset_path AS local_asset_path,
+  sg.name AS local_group_name,
+  tgt.addressable_name AS remote_address,
+  tgt.asset_path AS remote_asset_path,
+  tg.name AS remote_group_name
+FROM addressables_build_explicit_asset_externally_referenced_assets x
+JOIN addressables_build_explicit_assets src
+  ON src.id = x.explicit_asset_id AND src.build_id = x.build_id
+JOIN addressables_build_explicit_assets tgt
+  ON tgt.id = x.externally_referenced_asset_rid AND tgt.build_id = x.build_id
+JOIN addressables_build_bundles sb
+  ON sb.id = src.bundle AND sb.build_id = src.build_id
+JOIN addressables_build_bundles tb
+  ON tb.id = tgt.bundle AND tb.build_id = tgt.build_id
+JOIN addressables_build_groups sg
+  ON sg.guid = src.group_guid AND sg.build_id = src.build_id
+JOIN addressables_build_groups tg
+  ON tg.guid = tgt.group_guid AND tg.build_id = tgt.build_id
+WHERE x.build_id = :build_id
+  AND NOT (COALESCE(sb.load_path, '') LIKE 'https://%' OR COALESCE(sb.load_path, '') LIKE 'http://%')
+  AND (COALESCE(tb.load_path, '') LIKE 'https://%' OR COALESCE(tb.load_path, '') LIKE 'http://%')
+
+UNION ALL
+
+SELECT
+  'implicit' AS dependency_type,
+  src.addressable_name AS local_address,
+  src.asset_path AS local_asset_path,
+  sg.name AS local_group_name,
+  tgt.addressable_name AS remote_address,
+  tgt.asset_path AS remote_asset_path,
+  tg.name AS remote_group_name
+FROM addressables_build_explicit_asset_internal_referenced_explicit_assets iref
+JOIN addressables_build_explicit_assets src
+  ON src.id = iref.explicit_asset_id AND src.build_id = iref.build_id
+JOIN addressables_build_explicit_assets tgt
+  ON tgt.id = iref.internal_referenced_explicit_asset_rid AND tgt.build_id = iref.build_id
+JOIN addressables_build_bundles sb
+  ON sb.id = src.bundle AND sb.build_id = src.build_id
+JOIN addressables_build_bundles tb
+  ON tb.id = tgt.bundle AND tb.build_id = tgt.build_id
+JOIN addressables_build_groups sg
+  ON sg.guid = src.group_guid AND sg.build_id = src.build_id
+JOIN addressables_build_groups tg
+  ON tg.guid = tgt.group_guid AND tg.build_id = tgt.build_id
+WHERE iref.build_id = :build_id
+  AND NOT (COALESCE(sb.load_path, '') LIKE 'https://%' OR COALESCE(sb.load_path, '') LIKE 'http://%')
+  AND (COALESCE(tb.load_path, '') LIKE 'https://%' OR COALESCE(tb.load_path, '') LIKE 'http://%');
+```
+
+To print results from the command line, save the query to a file (e.g. `query.sql`) and run:
+
+```
+sqlite3 addressables_analysis.db ".mode column" ".headers on" ".param set :build_id 1" ".read query.sql"
+```
+
+Replace `1` with the `build_id` value found in step 2.

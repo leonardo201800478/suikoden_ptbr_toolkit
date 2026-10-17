@@ -1,0 +1,3 @@
+[console_scripts]
+suikoden-gui = suikoden_tool.gui:main
+suikoden-tool = suikoden_tool.cli:main

@@ -1,0 +1,91 @@
+# ContentLayout.json
+
+`ContentLayout.json` describes the content that a content directory build produced. It is written by [`BuildPipeline.BuildContentDirectory`](https://docs.unity3d.com/6000.6/Documentation/ScriptReference/BuildPipeline.BuildContentDirectory.html) into the build report directory, alongside the other build report files. For an overview of the build report directory and the other files it contains, see [Build report and build history](https://docs.unity3d.com/6000.6/Documentation/Manual/build-history.html) in the Unity Manual.
+
+This page explains what the file contains conceptually to aid in creation of build-analysis tooling or inspection of content directory build output.  The C# types that define the schema are published alongside this documentation in [`ContentLayout.cs`](../UnityDataModels/ContentLayout.cs), which is the authoritative reference for the individual fields.
+
+## What it is for
+
+Use `ContentLayout.json` to:
+
+* Find which source assets a build included, and which serialized file each one ended up in.
+* See the dependencies between the files the build produced.
+* Understand what contributes to the size or loading footprint of the content in the runtime.
+
+## Relationship to the build manifest
+
+`ContentLayout.json` is a superset of the build manifest that Unity ships with the content. The build manifest is a minimal summary that contains only what is required to load the content at runtime. `ContentLayout.json` is not shipped, and adds a more complete picture, including a mapping from the built content back to the source assets in the project.
+
+## What it does not contain
+
+* **Packaging information.** It does not record how the content is stored, for example whether the artifacts are packed inside Unity Archive files. It describes the logical content, not its on-disk packaging.
+* **Object-level detail.** It does not describe individual Unity objects inside the files, and contains no type information. This is intentional, to keep the file size reasonable. For object-level analysis, run [`UnityDataTool analyze`](command-analyze.md) on the build output. For per-type and per-asset size statistics, use the `ContentSummary` of the [BuildReport](buildreport.md).
+* **Non-deterministic data.** To avoid non-deterministic data this file contains no timestamps, and no information about the build process that created it. Two builds that produce identical content produce an identical `ContentLayout.json`.
+
+## Terminology
+
+The file uses a few terms consistently:
+
+* **Artifact** — a unit of build output. The term is used instead of "file" because the build output is not necessarily written as individual files (for example, it could be packed inside Unity Archives, or served from key/value storage).
+* **SerializedFile** — a Unity binary file containing serialized objects (the `.cf` content files of the build). See [Unity Content Format](unity-content-format.md).
+* **Loadable** — an object that can be loaded on demand, identified independently of the serialized file that happens to contain it.  Loadable will reference a specific object, for example the root GameObject of a prefab, but loading that object will load the entire SerializedFile.
+* **LoadableSceneId** — Similar to a Loadable, but referencing a Unity Scene.
+* **Source asset** — an asset in the source project (identified by GUID and asset path) that contributed to the build output.
+
+## Top-level structure
+
+`ContentLayout.json` is a single JSON object with the following members. Entries in several of the arrays cross-reference each other by array index or by hash, so the file describes a graph rather than a flat list.
+
+| Member | Description |
+|--------|-------------|
+| `Version` | Schema version of the file. See [Schema versioning](#schema-versioning). |
+| `BuildManifestHash` | Hash of the build manifest this layout corresponds to. |
+| `SerializedFiles` | One entry per serialized file in the build. Each entry records its stable id (see below), the source assets it contains, the index of its artifact in `BinaryArtifacts`, and its dependencies on other serialized files, loadables, and loadable scenes. The same source asset can appear in more than one serialized file (for example, a single FBX file can be split into multiple output files). |
+| `RootAssets` | The root assets the build was made from, as indices into `LoadableObjectIds`, in root input order. |
+| `LoadableObjectIds` | The objects that can be loaded on demand. Each entry records where the object lives in the built content (which serialized file) and its identity (source asset GUID, local file ID, and identifier type). |
+| `LoadableSceneIds` | The scenes in the build, each with its source project path and GUID, and the serialized file that contains it. |
+| `BinaryArtifacts` | The artifacts that make up the build output. See [Binary artifacts](#binary-artifacts). |
+
+### Stable ids
+
+Each serialized file has a **stable id**: an identity hash used to reference the file from other
+serialized files in a way that doesn't break when its content changes (unlike the content hash,
+which names the produced artifact and changes with every content change). Inside the built files,
+the external reference tables list these ids with a `.cfid` extension as symbolic placeholder names —
+see [Content Directory Format](contentdirectory-format.md). The synthetic built-in entry uses its
+resource path (`Library/unity default resources`) as its stable id.
+
+### Binary artifacts
+
+`BinaryArtifacts` is essentially the list of files in the build output. Each entry has a `Category` and a `Size`, and lists its direct dependencies in `ArtifactReferences`:
+
+* The entry with category `manifest` is the root of the graph.
+* Entries with category `contentfile` each have a matching entry in `SerializedFiles` (which references its artifact by index through `ArtifactIndex`).
+* `BinaryArtifacts` also reports the additional data files that hold audio, video, texture, and mesh data (the `.resource` and `.resS` files).
+* BinaryArtifacts are identified by the hash of their content.  When saved as a file, the filename is the hash and the file extension is based on the category.
+
+`ArtifactReferences` lists only direct dependencies. Dependencies that go through a loadable or loadable scene are not included, and the dependency graph is never cyclical. Together, this makes it possible to see every artifact required to load a particular serialized file, excluding data that is loaded on demand through a loadable or loadable scene.
+
+## Schema versioning
+
+The schema is subject to change. The `Version` field records the schema version of the file, independently of the Unity version that produced it. When the schema changes, the version number increments.
+
+[`ContentLayout.cs`](../UnityDataModels/ContentLayout.cs) always represents the latest schema version (currently version 3, written by Unity 6.7). The version 2 schema written by Unity 6.6 remains available as a reference definition in [`ContentLayoutV2.cs`](../UnityDataModels/ContentLayoutV2.cs) (namespace `UnityDataTools.Models.V2`).
+
+The [`analyze` command](command-analyze.md) accepts versions 2 and 3, importing both into the same database schema (see [ContentLayout in the Analyze Database](contentlayout-database.md)). Version 3 made these changes relative to version 2:
+
+* `SerializedFiles` entries carry `StableId` (the bare identity hash, no `.cfid` extension) instead of `ID`, and `ArtifactIndex` (the index of the file's artifact in `BinaryArtifacts`, `-1` for the built-in entry) instead of `ContentHash`.
+* `LoadableDependencies` and `RootAssets` reference loadables as indices into `LoadableObjectIds` instead of `ObjectIdHash` strings, and `ObjectIdHash` itself was removed.
+* `LoadableObjectIds` entries were trimmed to `{GUID, LFID, IdentifierType, SerializedFile}`. `AssetPath` and `OutputLFID` were removed: Unity 6.7 no longer remaps objects into clusters, so the local file id of an object in its output file matches the source id (MonoScripts excepted), and `LFID` now records the output-file id directly for placed objects.
+* `IsBuiltIn` is only written when true.
+
+## Related documentation
+
+| Topic | Description |
+|-------|-------------|
+| [ContentLayout in the Analyze Database](contentlayout-database.md) | How the [`analyze` command](command-analyze.md) imports this file into queryable database tables. |
+| [Content Directory Format](contentdirectory-format.md) | Content directory builds and inspecting them with UnityDataTool. |
+| [Build report and build history](https://docs.unity3d.com/6000.6/Documentation/Manual/build-reporting.html) | The build report directory and the files in it (Unity Manual). |
+| [BuildReport Support](buildreport.md) | Analyzing Unity build report files with UnityDataTool. |
+| [Unity Content Format](unity-content-format.md) | SerializedFiles, Unity Archives, and how build output maps back to source assets. |
+| [`analyze` command](command-analyze.md) | Object-level analysis of build output. |

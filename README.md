@@ -1,50 +1,17 @@
 # Suikoden I & II HD Remaster — Toolkit PT-BR
 
-Toolkit em Python para investigar recursos da versão Windows de **Suikoden I & II HD Remaster** e construir um fluxo reproduzível de localização para português brasileiro.
+Projeto inicial em Python para analisar recursos da versão Windows e desenvolver o fluxo de localização.
 
-> **Estado:** engenharia reversa inicial. O toolkit inspeciona cabeçalhos UnityFS, inventaria bundles e pode usar o UnityDataTool instalado localmente para extrair o JSON `textList` de um `TextAsset`. Ainda não reconstrói nem injeta textos em bundles.
+## Estado atual
+- Inspeção não destrutiva de cabeçalho UnityFS e SHA-256.
+- Inventário recursivo de `.bundle` em JSON.
+- Esquema JSON com campos para texto, tokens, ponteiros e limites.
+- Teste unitário do cabeçalho.
 
-## Objetivos e princípios
+**Ainda não extrai textos nem reconstrói bundles.** Precisamos identificar os tipos de assets e a estrutura dos objetos serializados. Limites e ponteiros serão preenchidos com evidências reais, não estimativas.
 
-- Priorizar uma ferramenta prática, eficiente e reproduzível para tradução PT-BR.
-- Manter texto original separado da tradução.
-- Preservar IDs, marcadores de controle, quebras de linha e Unicode.
-- Trabalhar com cópias e manter os arquivos originais do jogo intactos.
-- Registrar evidências e separar fatos confirmados de hipóteses.
-- Não versionar executáveis de terceiros, bundles do jogo ou dumps integrais.
-
-## Funcionalidades atuais
-
-- `suikoden-tool inspect`: inspeciona o cabeçalho de um bundle UnityFS e calcula SHA-256.
-- `suikoden-tool inventory`: inventaria recursivamente bundles de uma pasta.
-- `suikoden-tool template`: gera um modelo inicial de tradução.
-- `suikoden-tool text discover`: inventaria TextAssets de vários bundles, registra IDs, nomes, contagem de entradas e amostras de texto para classificar recursos sem modificar os originais.
-- `suikoden-tool text extract`: executa o UnityDataTool configurado, localiza objetos `TextAsset` e extrai um JSON com `textList` sem modificar o bundle original. Exige seleção explícita se houver vários recursos compatíveis.
-- `suikoden-tool text export`: converte um JSON com a estrutura `{"textList":[{"id":1,"text":"..."}]}` em um catálogo traduzível.
-- `suikoden-tool text validate` e `text stats`: validam e acompanham o progresso do catálogo.
-- `suikoden-tool text batch-export` e `text batch-import`: exportam/importam lotes CSV compatíveis com Excel, validando IDs e textos originais.
-- `suikoden-tool gui` / `suikoden-gui`: editor gráfico escuro com busca, filtros de status, salvamento seguro e sugestão de tradução por IA opcional.
-- Testes automatizados para exportação, preservação de texto, validação e fluxo CSV.
-
-O comando `text extract` usa a CLI externa UnityDataTool para obter `m_Script` do objeto `TextAsset` e aceita apenas conteúdo JSON com uma lista `textList`. O comando `text export` converte esse JSON em catálogo. A extração depende da versão instalada do UnityDataTool e ainda precisa ser validada localmente contra os bundles reais; a reinserção não está implementada. Se o catálogo de saída já existir, a exportação mescla os dados com segurança.
-
-## Estado comprovado da investigação
-
-Um dos bundles de `Backup_Translation`, `700bf7ec8ded4a20613b92988e3f8142.bundle`, foi inspecionado localmente. A ferramenta UnityDataTool 2.4.0 listou um objeto `AssetBundle` e um `TextAsset` chamado `text_add_en`. O dump do TextAsset contém um JSON com `textList`, que foi convertido em catálogo com **1.443 entradas**. Consulte [o registro de investigação](docs/REVERSE_ENGINEERING_LOG.md).
-
-Isso comprova a existência dessa tabela de textos, mas **não comprova que ela contenha todos os diálogos da história** nem que o formato possa ser reinserido sem análise adicional.
-
-## Requisitos
-
-- Windows 10/11 no ambiente de desenvolvimento inicial.
-- Python 3.11 ou superior.
-- Git recomendado.
-- Ferramentas externas opcionais para investigação de assets Unity.
-
-## Instalação
-
-No PowerShell, na raiz do repositório:
-
+## Configuração Windows / VS Code
+Recomendação inicial: Python 3.12 ou 3.13.
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -52,134 +19,49 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-Use uma versão instalada do Python 3.11 ou superior se Python 3.12 não estiver disponível.
-
-## Uso da CLI
-
-### Inspecionar um bundle
-
+## Comandos
 ```powershell
 suikoden-tool inspect "C:\caminho\arquivo.bundle"
-suikoden-tool inspect "C:\caminho\arquivo.bundle" -o output\bundle_info.json
-```
-
-### Inventariar bundles
-
-```powershell
 suikoden-tool inventory "C:\caminho\StandaloneWindows64" -o output\bundle_inventory.json
+suikoden-tool template --game suikoden_i -o data\translations_template.json
+pytest
+ruff check .
 ```
 
-### Gerar modelo de tradução
+## Ferramentas para avaliar
+- **AssetRipper** para extração em lote e análise de assets Unity suportados.
+- **UABEA** para inspeção/edição direcionada de assets e bundles.
+- **UnityDataTools** para dump e análise de conteúdo serializado.
+
+Links: https://github.com/AssetRipper/AssetRipper · https://github.com/nesrak1/UABEA · https://github.com/Unity-Technologies/UnityDataTools
+
+Os arquivos fornecidos apresentam assinatura `UnityFS` e estão em `StreamingAssets/aa/StandaloneWindows64`, estrutura típica de Unity Addressables. Isso identifica o contêiner, não ainda o recurso que contém cada texto.
+
+## Próximas etapas
+1. Inventariar os bundles originais do jogo e registrar hashes.
+2. Identificar `MonoBehaviour`, `TextAsset`, tabelas e fontes via ferramentas externas.
+3. Mapear formato de strings, IDs, tokens e referências.
+4. Implementar extração/importação JSON preservando dados técnicos.
+5. Criar validador de tokens, comprimento e quebra de linha.
+6. Criar editor visual de diálogos e menus.
+7. Implementar reconstrução/patch e testes no jogo.
+
+Trabalhe em cópias e mantenha os arquivos originais preservados.
+
+## Extração automática de textos (UnityDataTool)
+
+O comando `extract-texts` processa os quatro bundles conhecidos, considera somente entradas `SerializedFile`, identifica objetos `TextAsset` e procura pares JSON `id`/`text`. A extração é somente leitura: não reconstrói nem sobrescreve os bundles originais.
 
 ```powershell
-suikoden-tool template --game suikoden_i -o data\suikoden_i_template.json
-suikoden-tool template --game suikoden_ii -o data\suikoden_ii_template.json
+suikoden-tool extract-texts "G:\SteamLibrary\steamapps\common\Suikoden I and II HD Remaster\Suikoden I and II HD Remaster_Data\StreamingAssets\aa\StandaloneWindows64" --unity-data-tool ".\tools\UnityDataTools\UnityDataTool.exe" -o output\catalogo_textos.json --csv output\catalogo_textos.csv
 ```
 
-### Descobrir os TextAssets de todos os bundles
+O JSON é o catálogo principal; o CSV UTF-8 com BOM facilita a revisão no Excel. Cada entrada conserva o ID de origem, o bundle, o caminho do SerializedFile, o ID do objeto e o texto original. O marcador `?` observado nos dumps é preservado literalmente e listado em `control_tokens`; **não é convertido automaticamente em quebra de linha**, pois seu significado ainda precisa ser confirmado. Os diagnósticos do catálogo registram contagens por bundle e eventuais erros.
 
-Execute a descoberta antes de classificar os recursos ou escolher o catálogo a traduzir:
-
-```powershell
-suikoden-tool text discover `
-    --directory "G:\SteamLibrary\steamapps\common\Suikoden I and II HD Remaster\Suikoden I and II HD Remaster_Data\StreamingAssets\aa\StandaloneWindows64" `
-    --output work\bundle_analysis\text_discovery.json `
-    --tool ".\tools\UnityDataTools\UnityDataTool.exe"
-```
-
-O relatório registra tamanho e SHA-256 de cada bundle, objetos TextAsset, nome, quantidade de entradas `textList` e até oito amostras. Erros por bundle são registrados no relatório para permitir que a inspeção continue. A descoberta não modifica arquivos do jogo.
-
-### Extrair um TextAsset diretamente do bundle
-
-Configure o UnityDataTool de uma destas formas: informe `--tool`, defina a variável `UNITY_DATA_TOOL` ou coloque `UnityDataTool.exe` em `tools/UnityDataTools/`. Baixe a ferramenta apenas das [releases oficiais](https://github.com/Unity-Technologies/UnityDataTools/releases).
-
-```powershell
-suikoden-tool text extract `
-    --bundle "C:\caminho\StandaloneWindows64\700bf7ec8ded4a20613b92988e3f8142.bundle" `
-    --output work\bundle_analysis\text_add_en.json `
-    --asset-name text_add_en
-```
-
-Se o bundle contiver mais de um `SerializedFile`, informe `--entry` com o nome listado por `UnityDataTool archive list`. Se houver mais de um `TextAsset` com `textList`, informe o nome exato em `--asset-name`. A saída existente não é sobrescrita sem `--force`. O comando extrai apenas a fonte JSON; a criação/mesclagem do catálogo continua sendo uma etapa separada.
-### Exportar catálogo a partir de JSON extraído
-
-```powershell
-suikoden-tool text export `
-    --input work\bundle_analysis\text_add_en.json `
-    --output work\bundle_analysis\catalogo_pt_br.json `
-    --target-language pt-BR
-```
-
-O exportador valida a estrutura `textList`, exige `id` e `text`, rejeita IDs duplicados e preserva o texto original. Na atualização, entradas com ID e texto original compatíveis mantêm tradução e status; entradas com texto de origem alterado mantêm a tradução anterior, guardam `previous_original` e recebem `needs_review`; IDs que sumiram da fonte são preservados como `orphaned`. Catálogos existentes inválidos ou de outro idioma/recurso são recusados sem alteração.
-
-### Validar e acompanhar o catálogo
-
-```powershell
-suikoden-tool text validate --input work\\bundle_analysis\\catalogo_pt_br.json
-suikoden-tool text validate --input work\\bundle_analysis\\catalogo_pt_br.json --source work\\bundle_analysis\\text_add_en.json
-suikoden-tool text stats --input work\\bundle_analysis\\catalogo_pt_br.json
-```
-
-`validate` retorna erros estruturais e avisos para traduções pendentes, mudanças de texto e divergências com a fonte. `stats` conta `pending`, `translated`, `reviewed`, `needs_review` e `orphaned` sem alterar o arquivo.
-
-### Editor gráfico de tradução\n\nAbra o catálogo de trabalho em uma interface com lista à esquerda e editor à direita:\n\n```powershell\nsuikoden-tool gui --catalog work\\bundle_analysis\\catalogo_pt_br.json\n# ou, sem catálogo inicial:\nsuikoden-gui\n```\n\nA interface permite pesquisar por ID, original ou tradução, filtrar por status, editar manualmente, avançar para pendências e acompanhar as estatísticas. No topo, **Pasta do jogo** permite selecionar ou informar a pasta que contém o executável; o caminho absoluto é salvo nas configurações do usuário (fora do repositório) e restaurado ao reabrir a GUI. A interface também verifica se a pasta `*_Data/StreamingAssets/aa/StandaloneWindows64` está disponível, para servir de referência consistente aos próximos fluxos de descoberta e extração. O catálogo continua editável mesmo sem configurar a pasta do jogo. `Salvar tradução` marca a entrada como `translated`; `Salvar revisada` marca como `reviewed`. Entradas `needs_review` só podem ser confirmadas pelo salvamento explícito como revisadas. O catálogo é validado antes de cada gravação e as alterações são gravadas atomicamente, preservando campos extras e o texto original.\n\n**Assistência de IA opcional:** o botão `Sugerir com IA` envia somente o texto original selecionado e o contexto opcional para a API OpenAI. A sugestão aparece no editor, mas nunca é gravada automaticamente; revise e salve manualmente. Configure `OPENAI_API_KEY` no ambiente antes de usar o recurso. Opcionalmente, defina `OPENAI_MODEL` (padrão `gpt-4o-mini`). A chave não é armazenada no catálogo nem na interface. A chamada à API pode gerar custos conforme sua conta. A edição manual funciona sem chave e sem dependências Python extras.\n\n### Traduzir em lotes com CSV/Excel
-
-```powershell
-# Exporta até 100 entradas pendentes e que precisam de revisão
-suikoden-tool text batch-export --input work\\bundle_analysis\\catalogo_pt_br.json --output work\\bundle_analysis\\lote_001.csv --limit 100
-
-# Para exportar somente entradas pending
-suikoden-tool text batch-export --input work\\bundle_analysis\\catalogo_pt_br.json --output work\\bundle_analysis\\lote_001.csv --limit 100 --pending-only
-
-# Depois de preencher a coluna translation no Excel, importe o lote
-suikoden-tool text batch-import --catalog work\\bundle_analysis\\catalogo_pt_br.json --input work\\bundle_analysis\\lote_001.csv
-```
-
-O CSV usa UTF-8 com BOM para facilitar a abertura no Excel. Não edite as colunas `id`, `id_type` e `original`. A importação rejeita IDs duplicados, IDs desconhecidos e originais divergentes antes de gravar qualquer alteração. Traduções vazias são ignoradas; o texto original nunca é substituído. Entradas `needs_review` permanecem nesse estado até revisão explícita. Faça uma cópia de segurança do catálogo antes de importar lotes.
-
-### Testes e ajuda
+Testes automatizados:
 
 ```powershell
 python -m pytest -q
-ruff check .
-suikoden-tool --help
-suikoden-tool text export --help
-suikoden-tool text validate --help
-suikoden-tool text stats --help
 ```
 
-Execute esses comandos na branch atual após atualizar o clone local. Não considere os novos testes aprovados até executar a suíte.
-
-
-## Ferramentas externas
-
-AssetRipper, UABEA e UnityDataTool são auxiliares locais, não dependências obrigatórias do pacote Python. Obtenha-as nas fontes oficiais e mantenha-as em pastas ignoradas pelo Git. Consulte [docs/EXTERNAL_TOOLS.md](docs/EXTERNAL_TOOLS.md).
-
-## Documentação para pessoas e assistentes de IA
-
-- [Arquitetura e roteiro](docs/ARCHITECTURE.md)
-- [Formato dos catálogos](docs/TRANSLATION_FORMAT.md)
-- [Ferramentas externas](docs/EXTERNAL_TOOLS.md)
-- [Registro de engenharia reversa](docs/REVERSE_ENGINEERING_LOG.md)
-- [Contexto do projeto para IA](docs/AI_CONTEXT.md)
-- [Prompts reutilizáveis para IA](docs/AI_PROMPTS.md)
-
-## Próximas prioridades
-
-1. Documentar o comportamento atual e estabelecer uma linha de base reproduzível.
-2. Ampliar validação de tokens, variáveis e consistência linguística com regras confirmadas.
-3. Adicionar testes de integração da CLI e validar fluxos com catálogos reais em cópias locais.
-4. Validar `text extract` contra UnityDataTool 2.4.0 e os bundles reais em Windows; reforçar o parser com amostras reais de dumps antes de considerar a extração estável.
-5. Inventariar outros bundles e localizar recursos de diálogo dos dois jogos.
-6. Só então projetar importação/reconstrução, com testes de ida e volta e cópias de segurança.
-
-## Licença e direitos
-
-O código-fonte do toolkit é distribuído sob MIT conforme `LICENSE`. Isso não concede direitos sobre os jogos, textos, imagens, áudio ou arquivos de Suikoden. O projeto é independente e não é afiliado nem endossado pela Konami.
-
-
-### Fluxo gráfico de extração dos quatro bundles
-
-Na GUI, abra a guia **Extração dos 4 bundles**, selecione exatamente os quatro arquivos `.bundle` e clique em **Extrair e abrir 4 guias**. O toolkit analisa cada bundle isoladamente, extrai o TextAsset JSON que contém `textList`, gera os catálogos em `work/bundle_analysis/catalogs` e abre uma guia independente por recurso. Os JSONs extraídos ficam em `work/bundle_analysis/sources`. Se houver vários TextAssets compatíveis, a ferramenta prefere `text_add_en`; caso contrário, escolhe o que contém mais entradas e registra um aviso. Confira essa identificação antes de iniciar a tradução. A extração não modifica os bundles.
-
-A mesma guia permite informar e salvar localmente a chave da API OpenAI. O valor é guardado em `%APPDATA%\\SuikodenPTBRToolkit\\settings.json` em texto simples; restrinja o acesso ao arquivo e não o compartilhe. A API é cobrada separadamente da assinatura do ChatGPT. Também é possível usar a variável de ambiente `OPENAI_API_KEY`.
+A validação executada no ambiente de desenvolvimento cobre a extração de pares `id`/`text`, deduplicação, preservação dos marcadores e exportação CSV. A execução integrada contra os bundles reais ainda deve ser feita no Windows onde o `UnityDataTool.exe` está disponível.

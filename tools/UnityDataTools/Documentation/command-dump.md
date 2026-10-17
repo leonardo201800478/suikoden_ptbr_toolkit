@@ -1,0 +1,304 @@
+# dump Command
+
+The `dump` command converts Unity SerializedFiles into human-readable text format. This is useful for inspecting the internal structure and properties of Unity assets.
+
+## Quick Reference
+
+```
+UnityDataTool dump <path> [options]
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `<path>` | Path to the SerializedFile, or to an archive that contains SerializedFiles | *(required)* |
+| `-e, --entry <name>` | Only dump this SerializedFile from inside the archive (see [Archive Support](#archive-support)) | All SerializedFiles |
+| `-o, --output-path <path>` | Output folder | Current folder |
+| `--stdout` | Write the dump to stdout (status and errors go to stderr). Mutually exclusive with `-o`. | `false` |
+| `-f, --output-format <format>` | Output format | `text` |
+| `-a, --show-large-arrays` | Dump the full content of large arrays of basic data types, instead of summarizing them with a hash | `false` |
+| `-x, --hexfloat` | Print the bit-exact hexadecimal representation after each float and double value | `false` |
+| `-i, --objectid <id>` | Only dump object with this ID | All objects |
+| `-t, --type <type>` | Filter by object type (ClassID number or type name) | All objects |
+| `-d, --typetree-data <file>` | Load an external TypeTree data file before processing (Unity 6.5+) | — |
+
+## Examples
+
+Dump all objects in a file to the current directory:
+```bash
+UnityDataTool dump /path/to/file
+```
+
+Dump to a specific output folder:
+```bash
+UnityDataTool dump /path/to/file -o /path/to/output
+```
+
+Dump a single object by ID:
+```bash
+UnityDataTool dump /path/to/file -i 1234567890
+```
+
+Dump the full content of large arrays (e.g. mesh or texture data):
+```bash
+UnityDataTool dump /path/to/file -a
+```
+
+Include the bit-exact hexadecimal representation of float and double values, useful for seeing tiny differences that get lost when converting to decimal (similar to the `-hexfloat` option of Unity's `binary2text` tool):
+```bash
+UnityDataTool dump /path/to/file -x
+```
+```
+floatValue (float) 3.1415927(0x40490fdb)
+doubleValue (double) 2.718281828459045(0x4005bf0a8b145769)
+```
+
+Dump only MonoBehaviour objects by type name:
+```bash
+UnityDataTool dump /path/to/file -t MonoBehaviour
+```
+
+Same thing using the numeric ClassID:
+```bash
+UnityDataTool dump /path/to/file -t 114
+```
+
+Dump the AssetBundle manifest object:
+```bash
+UnityDataTool dump mybundle -t AssetBundle
+```
+
+Write the dump to stdout and pipe it through another tool:
+```bash
+UnityDataTool dump /path/to/file --stdout | grep "ClassID: 114"
+```
+
+---
+
+## Writing to stdout
+
+Use `--stdout` to send the dump to standard output instead of writing a `.txt` file. Status messages (the `Processing ...` line, errors, and stack traces) are routed to stderr so the dump on stdout is clean for piping or redirecting.
+
+```bash
+UnityDataTool dump /path/to/file --stdout > my-dump.txt
+```
+
+Restrictions:
+
+- `--stdout` and `-o` are mutually exclusive.
+- For Unity archives that contain more than one SerializedFile, choose the one to dump with `--entry`. Without it `--stdout` is refused, because there is no unambiguous way to deliver multiple files on a single stream.
+
+---
+
+## Filtering by Type
+
+The `-t` / `--type` option filters output to objects of a specific Unity type. It accepts either a numeric ClassID (e.g. `114`) or a type name (e.g. `MonoBehaviour`). Type name matching is case-insensitive.
+
+This is particularly useful for inspecting MonoBehaviour data in built AssetBundles. MonoBehaviour and ScriptableObject field values are serialized as binary, and a typical bundle contains many other object types (meshes, textures, materials, etc.). Using `-t MonoBehaviour` dumps only the scripting objects, showing the serialized C# field names, types, and values.
+
+---
+
+## Archive Support
+
+When you pass an Archive file (like an AssetBundle), the command dumps all SerializedFiles inside.
+
+**Example:** For an AssetBundle `scenes.bundle` containing two scenes:
+
+```bash
+UnityDataTool dump scenes.bundle
+```
+
+**Output files:**
+```
+BuildPlayer-SampleScene.sharedAssets.txt
+BuildPlayer-SampleScene.txt
+BuildPlayer-Scene2.sharedAssets.txt
+BuildPlayer-Scene2.txt
+```
+
+To dump only one of the SerializedFiles, pass its name with `-e` / `--entry`. Nothing is extracted to disk. The names are listed by [`archive list`](command-archive.md), and they are also the `serialized_file` column of `object_view` in a database built by `analyze`:
+
+```bash
+UnityDataTool dump scenes.bundle -e BuildPlayer-Scene2.sharedAssets --stdout
+```
+
+When the archive contains only one SerializedFile (the usual case for an AssetBundle that does not contain scenes), `--stdout` uses it without `--entry`. When there are several, the error lists their names.
+
+---
+
+## TypeTree Requirement
+
+Unity's binary SerializedFile format stores objects as raw binary blobs. TypeTrees are schema metadata embedded in the file that describe the layout of each type — field names, data sizes, and alignment. The `dump` command requires TypeTrees to interpret those blobs and produce readable output.
+
+**When are TypeTrees absent?**
+
+TypeTrees are included by default. They are stripped in two common situations:
+
+- **Player builds** with *Strip Engine Code* or similar size-reduction options enabled.
+- **AssetBundles** built with the *Disable Write TypeTree* build option.
+
+**Error when TypeTrees are missing:**
+
+Various errors can be caused by missing TypeTrees, including:
+
+```
+ArgumentException: Invalid object id
+```
+
+**Tip:** Use `serialized-file metadata` to confirm whether a file has TypeTrees:
+
+```bash
+UnityDataTool serialized-file metadata /path/to/file
+```
+
+The `TypeTree Definitions` field will show `No` when TypeTrees are absent.
+
+**External TypeTree data (Unity 6.5+):**
+
+If your bundles were built with TypeTree data extracted to a separate file, use the `--typetree-data` option to load it:
+
+```bash
+UnityDataTool dump /path/to/file.bundle --typetree-data /path/to/typetree.bin
+```
+
+---
+
+## Output Format
+
+The output is similar to Unity's `binary2text` tool. Unfiltered dumps begin with external references (when filtering with `-i` or `-t` this section is omitted — use the [`serialized-file externalrefs`](#) command if you want them separately):
+
+```
+External References
+path(1): "Library/unity default resources" GUID: 0000000000000000e000000000000000 Type: 0
+path(2): "Resources/unity_builtin_extra" GUID: 0000000000000000f000000000000000 Type: 0
+path(3): "archive:/CAB-35fce856128a6714740898681ea54bbe/..." GUID: 00000000000000000000000000000000 Type: 0
+```
+
+Followed by object entries:
+
+```
+ID: -8138362113332287275 (ClassID: 135) SphereCollider 
+  m_GameObject PPtr<GameObject> 
+    m_FileID int 0
+    m_PathID SInt64 -1473921323670530447
+  m_Material PPtr<PhysicMaterial> 
+    m_FileID int 0
+    m_PathID SInt64 0
+  m_IsTrigger bool False
+  m_Enabled bool True
+  m_Radius float 0.5
+  m_Center Vector3f 
+    x float 0
+    y float 0
+    z float 0
+```
+
+### `[SerializeReference]` fields
+
+A field marked `[SerializeReference]` in C# appears in the dump with the type **`managedReference`**,
+and its value is not the object - it is a number called a **`rid`** (reference id). The objects
+themselves are listed together in a `references` section, once each, with their concrete C# type and
+their field values.
+
+Take this script:
+
+```csharp
+public class Inventory : MonoBehaviour
+{
+    [Serializable]
+    public class Item
+    {
+        public string name;
+        public int count;
+    }
+
+    [SerializeReference] public Item primary;
+    [SerializeReference] public Item backup;
+    [SerializeReference] public Item spare;
+}
+```
+
+with `primary` and `backup` both assigned the *same* `Item`, and `spare` left null. Dumping it:
+
+```
+ID: 3862108129085620391 (ClassID: 114) MonoBehaviour
+  m_GameObject (PPtr<GameObject>)
+    m_FileID (int) 0
+    m_PathID (SInt64) -5904263129458716409
+  m_Enabled (UInt8) 1
+  m_Script (PPtr<MonoScript>)
+    m_FileID (int) 1
+    m_PathID (SInt64) 1197423208934291241
+  m_Name (string)
+  references (ManagedReferenceRegistry)
+    version (int) 3
+    rid(-2) ReferencedObject
+      null
+    rid(3218405420927320064) ReferencedObject
+      type (ReferencedManagedType)
+        class (string) Inventory/Item
+        ns (string)
+        asm (string) Assembly-CSharp
+      data ReferencedObjectData
+        name (string) Health potion
+        count (int) 3
+  primary (managedReference)
+    rid (SInt64) 3218405420927320064
+  backup (managedReference)
+    rid (SInt64) 3218405420927320064
+  spare (managedReference)
+    rid (SInt64) -2
+```
+
+Reading it:
+
+* **`primary` and `backup` show the same `rid`.** They are two references to one object, so the
+  object is listed once and the sharing is visible - this is the whole point of
+  `[SerializeReference]` over a plain serialized field, which would have stored two independent
+  copies.
+* **`spare` shows `rid (SInt64) -2`**, the marker for null, and the matching entry is listed as
+  `null` with no type or data.
+* **`class` is the concrete runtime type**, which can be a subclass of the field's declared type -
+  that is what `[SerializeReference]` is for. Nested classes use a `/`, as in `Inventory/Item`.
+* The entries are listed in the order the file stores them, which is not necessarily the order the
+  fields appear in.
+
+The `version` line describes how the registry is stored rather than anything about your data. It is
+`3` for content built with Unity 6.7 or newer and `2` before that, and in older files the
+`references` section appears *after* the fields instead of before them. The entries mean the same
+thing either way.
+
+**Refer to the [TextDumper documentation](textdumper.md) for detailed output format explanation.**
+
+---
+
+## Large Arrays
+
+Arrays of basic data types with more than 256 elements (e.g. mesh vertex data, texture bytes) are not printed element by element. Instead the content is summarized with a hash (a CRC32 of the raw bytes), similar to the `-largebinaryhashonly` option of Unity's `binary2text` tool:
+
+```
+m_IndexBuffer (vector)
+  Array<UInt8>[2232]
+    ArrayDataHash 3be77a33
+```
+
+This keeps the output readable while still allowing a diff of two dumps to detect content changes. Pass `-a` / `--show-large-arrays` to print every element instead.
+
+(The former `--skip-large-arrays` option is deprecated: it is accepted but ignored, since large arrays are now summarized by default.)
+
+---
+
+## Understanding PPtrs
+
+PPtrs (Property Pointers) are Unity's mechanism for referencing objects:
+
+| Field | Description |
+|-------|-------------|
+| `m_FileID` | Index into External References list (0 = same file) |
+| `m_PathID` | Object's Local File Identifier (LFID) in that file |
+
+A null reference will have value m_FileID = 0, m_PathID = 0
+
+The external reference table is used to resolve cross-file references. It always starts at index 1.  m_FileID 0 is used for references within the current file.
+
+
+

@@ -150,6 +150,7 @@ class TranslationApp:
             side="left", padx=(16, 0), pady=(5, 0)
         )
         ttk.Button(header, text="Abrir catálogo", command=self.choose_catalog).pack(side="right")
+        ttk.Button(header, text="Exportar JSON traduzido…", style="Accent.TButton", command=self.export_translated_json).pack(side="right", padx=(0, 8))
         ttk.Button(header, text="Comparar JSON por ID", command=self.compare_translation_jsons).pack(side="right", padx=(0, 8))
         ttk.Button(header, text="Carregar JSON preparado", command=self.choose_prepared_text_json).pack(side="right", padx=(0, 8))
         ttk.Button(header, text="Importar dumps TextAsset", command=self.choose_textasset_dumps).pack(side="right", padx=(0, 8))
@@ -1028,6 +1029,76 @@ class TranslationApp:
             tree.selection_set(first)
             tree.focus(first)
             on_row_selected()
+
+    def export_translated_json(self) -> None:
+        """Exporta o catálogo para um JSON textList com IDs e textos traduzidos."""
+        if not self.catalog or not self.entries or self.catalog_path is None:
+            messagebox.showwarning(
+                "Nenhum catálogo aberto",
+                "Abra o catálogo de tradução antes de exportar.",
+                parent=self.root,
+            )
+            return
+        if self.dirty:
+            messagebox.showwarning(
+                "Alterações não salvas",
+                "Salve a entrada atual antes de exportar o JSON traduzido.",
+                parent=self.root,
+            )
+            return
+
+        missing = [
+            entry for entry in self.entries
+            if entry.get("original", "").strip() and not entry.get("translation", "").strip()
+            and entry.get("status") != "orphaned"
+        ]
+        if missing:
+            examples = ", ".join(str(entry.get("id")) for entry in missing[:20])
+            suffix = "…" if len(missing) > 20 else ""
+            if not messagebox.askyesno(
+                "Há traduções pendentes",
+                f"{len(missing)} entradas com texto original ainda não têm tradução. "
+                f"IDs: {examples}{suffix}.\n\nExportar mesmo assim? As entradas pendentes ficarão com o texto original em inglês.",
+                parent=self.root,
+            ):
+                return
+
+        default_name = f"{self.catalog.get('resource', self.catalog_path.stem)}_ptbr.json"
+        filename = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Exportar JSON traduzido",
+            defaultextension=".json",
+            initialfile=default_name,
+            filetypes=(("Arquivo JSON", "*.json"), ("Todos os arquivos", "*.*")),
+        )
+        if not filename:
+            return
+
+        text_list = []
+        for entry in self.entries:
+            if entry.get("status") == "orphaned":
+                continue
+            original = entry.get("original", "")
+            translation = entry.get("translation", "")
+            text_list.append({
+                "id": entry["id"],
+                "text": translation if translation.strip() or not original.strip() else original,
+            })
+        try:
+            Path(filename).write_text(
+                json.dumps({"textList": text_list}, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            messagebox.showerror("Falha ao exportar", f"Não foi possível salvar o JSON: {exc}", parent=self.root)
+            return
+
+        messagebox.showinfo(
+            "Exportação concluída",
+            f"JSON traduzido exportado com {len(text_list)} entradas para:\n{filename}\n\n"
+            "Este é um JSON de texto para revisão/conversão; não é um bundle pronto para instalar no jogo.",
+            parent=self.root,
+        )
 
     def choose_catalog(self) -> None:
         filename = filedialog.askopenfilename(

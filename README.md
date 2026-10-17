@@ -21,7 +21,7 @@ Toolkit em Python para investigar recursos da versão Windows de **Suikoden I & 
 - `suikoden-tool text export`: converte um JSON com a estrutura `{"textList":[{"id":1,"text":"..."}]}` em um catálogo traduzível.
 - Testes automatizados para exportação, preservação de texto e validação de entradas.
 
-O comando `text export` **não extrai o TextAsset diretamente do bundle**. A extração do objeto foi feita durante a investigação com UnityDataTool; o comando recebe o JSON já extraído.
+O comando `text export` **não extrai o TextAsset diretamente do bundle**. A extração do objeto foi feita durante a investigação com UnityDataTool; o comando recebe o JSON já extraído. Se o catálogo de saída já existir, a exportação mescla os dados com segurança.
 
 ## Estado comprovado da investigação
 
@@ -80,7 +80,17 @@ suikoden-tool text export `
     --target-language pt-BR
 ```
 
-O exportador valida a estrutura `textList`, exige `id` e `text`, rejeita IDs duplicados e preserva o texto original. Cada execução gera traduções vazias e status `pending`; portanto, **não execute sobre um catálogo já traduzido sem fazer backup**, pois ainda não há mesclagem/atualização segura.
+O exportador valida a estrutura `textList`, exige `id` e `text`, rejeita IDs duplicados e preserva o texto original. Na atualização, entradas com ID e texto original compatíveis mantêm tradução e status; entradas com texto de origem alterado mantêm a tradução anterior, guardam `previous_original` e recebem `needs_review`; IDs que sumiram da fonte são preservados como `orphaned`. Catálogos existentes inválidos ou de outro idioma/recurso são recusados sem alteração.
+
+### Validar e acompanhar o catálogo
+
+```powershell
+suikoden-tool text validate --input work\\bundle_analysis\\catalogo_pt_br.json
+suikoden-tool text validate --input work\\bundle_analysis\\catalogo_pt_br.json --source work\\bundle_analysis\\text_add_en.json
+suikoden-tool text stats --input work\\bundle_analysis\\catalogo_pt_br.json
+```
+
+`validate` retorna erros estruturais e avisos para traduções pendentes, mudanças de texto e divergências com a fonte. `stats` conta `pending`, `translated`, `reviewed`, `needs_review` e `orphaned` sem alterar o arquivo.
 
 ### Testes e ajuda
 
@@ -108,8 +118,8 @@ AssetRipper, UABEA e UnityDataTool são auxiliares locais, não dependências ob
 ## Próximas prioridades
 
 1. Documentar o comportamento atual e estabelecer uma linha de base reproduzível.
-2. Implementar atualização/mesclagem segura de catálogos sem perder traduções.
-3. Criar validação e estatísticas de tradução.
+2. Ampliar validação de tokens, variáveis e consistência linguística com regras confirmadas.
+3. Adicionar testes de integração da CLI e validar fluxos com catálogos reais em cópias locais.
 4. Automatizar a extração de TextAssets usando uma ferramenta externa detectada/configurada, mantendo o parser desacoplado.
 5. Inventariar outros bundles e localizar recursos de diálogo dos dois jogos.
 6. Só então projetar importação/reconstrução, com testes de ida e volta e cópias de segurança.

@@ -9,6 +9,7 @@ O pacote usa uma estrutura `src/`:
 - `src/suikoden_tool/cli.py`: interface de linha de comando (`inspect`, `inventory`, `template`).
 - `tests/`: testes automatizados.
 - `data/translations_template.json`: modelo vazio para iniciar o trabalho de tradução.
+- `tools/` (opcional e local): distribuições de ferramentas externas para investigação de assets; as pastas de ferramentas são ignoradas pelo Git e não são dependências de instalação do pacote.
 
 ## Fluxo pretendido
 
@@ -36,6 +37,12 @@ Teste no jogo e relatório de regressões
 
 A extração, a edição visual e a reconstrução ainda são etapas futuras, não funcionalidades disponíveis hoje.
 
+## Ferramentas externas
+
+AssetRipper, UABEA e UnityDataTools são ferramentas auxiliares em avaliação. Não são importadas pelo código Python e não devem ser tratadas como dependências obrigatórias. Instale-as separadamente a partir das publicações oficiais e mantenha as distribuições em pastas locais dentro de `tools/`, se conveniente. Consulte [Ferramentas externas](EXTERNAL_TOOLS.md) para obter instruções, práticas de versionamento e registro dos experimentos.
+
+O `.gitignore` exclui as pastas locais dessas ferramentas e extensões binárias comuns. Isso evita novos commits de executáveis, mas não elimina automaticamente objetos grandes que já façam parte do histórico Git. Se um push for rejeitado por arquivos grandes, faça backup e limpe o histórico local não publicado; não tente resolver apenas adicionando novas regras ao `.gitignore`.
+
 ## Regras de engenharia
 
 1. **Reversibilidade:** não descartar dados desconhecidos necessários para reconstruir o asset.
@@ -45,6 +52,7 @@ A extração, a edição visual e a reconstrução ainda são etapas futuras, n�
 5. **Limites baseados em evidência:** separar limites confirmados pelo jogo de observações visuais e avisos heurísticos.
 6. **Versionamento:** versionar o esquema JSON e criar migrações quando houver mudanças incompatíveis.
 7. **Testes:** incluir casos válidos, inválidos, truncados, strings vazias, Unicode e dados com tokens.
+8. **Dependências externas:** registrar ferramenta, versão, hash de entrada, parâmetros e resultado; nunca pressupor que a ferramenta preserva todos os dados.
 
 ## Descoberta de formatos
 

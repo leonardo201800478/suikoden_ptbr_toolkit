@@ -69,7 +69,11 @@ def export_translation_batch(
             writer.writerow(
                 {
                     "id": str(entry_id),
-                    "id_type": "int" if isinstance(entry_id, int) and not isinstance(entry_id, bool) else "str",
+                    "id_type": (
+                        "int"
+                        if isinstance(entry_id, int) and not isinstance(entry_id, bool)
+                        else "str"
+                    ),
                     "original": entry["original"],
                     "translation": entry["translation"],
                     "status": entry["status"],
@@ -127,7 +131,9 @@ def import_translation_batch(catalog_path: Path, input_path: Path) -> dict[str, 
         seen.add(key)
         entry = by_id.get(key)
         if entry is None:
-            raise ValueError(f"ID do CSV não existe no catálogo (linha {line_number}): {id_text!r}.")
+            raise ValueError(
+                f"ID do CSV não existe no catálogo (linha {line_number}): {id_text!r}."
+            )
         if original != entry["original"]:
             raise ValueError(
                 f"Texto original divergente para ID {id_text!r} na linha {line_number}; "

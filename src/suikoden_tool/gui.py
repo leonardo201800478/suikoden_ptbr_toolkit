@@ -854,14 +854,62 @@ class TranslationApp:
     def save_reviewed(self) -> None:
         self._save("reviewed")
 
+    @staticmethod
+    def _dialogue_line_lengths(value: str) -> list[tuple[int, int]]:
+        """Retorna (número da linha, caracteres exibidos) segundo as regras conhecidas."""
+        import re
+
+        # Marcadores de nome são substituições dinâmicas; reservar 10 caracteres cada.
+        name_tokens = ("♂㈱", "♂①", "♂②", "♂⑩")
+        # ∠ encerra uma linha; ∨ encerra uma caixa. Nenhum dos dois conta no limite.
+        lines = re.split(r"[∠∨]", value)
+        results: list[tuple[int, int]] = []
+        for line_number, line in enumerate(lines, start=1):
+            count = 0
+            i = 0
+            while i < len(line):
+                # /"texto"/ aparece no jogo como "texto": contar o texto e as aspas.
+                if line.startswith('/"', i):
+                    end = line.find('"/', i + 2)
+                    if end >= 0:
+                        count += len(line[i + 1:end + 1])
+                        i = end + 2
+                        continue
+                token = next((token for token in name_tokens if line.startswith(token, i)), None)
+                if token:
+                    count += 10
+                    i += len(token)
+                else:
+                    count += 1
+                    i += 1
+            results.append((line_number, count))
+        return results
+
     def _save(self, status: str) -> None:
         entry = self._current_entry()
         if entry is None or self.catalog_path is None:
             messagebox.showinfo("Selecione uma entrada", "Abra um catálogo e selecione uma entrada.")
             return
-        translation = self._lines_to_markers(
-            self.translation_text.get("1.0", "end-1c")
-        )
+        raw_translation = self.translation_text.get("1.0", "end-1c")
+        over_limit = [
+            (line_number, count)
+            for line_number, count in self._dialogue_line_lengths(raw_translation)
+            if count > 66
+        ]
+        if over_limit:
+            details = "\\n".join(
+                f"Linha {line_number}: {count} caracteres (limite: 66)"
+                for line_number, count in over_limit
+            )
+            messagebox.showwarning(
+                "Limite de caracteres excedido",
+                "A tradução não foi salva. Cada linha de diálogo pode ter no máximo 66 caracteres.\\n\\n"
+                + details
+                + "\\n\\nRevise as linhas indicadas e tente salvar novamente.",
+                parent=self.root,
+            )
+            return
+        translation = self._lines_to_markers(raw_translation)
         try:
             saved = save_entry(self.catalog_path, entry["id"], translation, status)
         except (OSError, ValueError) as exc:

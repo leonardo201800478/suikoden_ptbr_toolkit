@@ -6,7 +6,6 @@ import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
-from typing import Any, Callable
 
 from suikoden_tool.gui_service import load_catalog, save_entry, suggest_translation
 from suikoden_tool.app_settings import load_settings

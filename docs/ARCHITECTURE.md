@@ -51,7 +51,7 @@ Importação/reconstrução em cópia de trabalho
 Comparação de integridade + teste no jogo
 ```
 
-A inspeção básica, o inventário, o modelo, a exportação de JSON previamente extraído, a mesclagem segura, a validação estrutural, as estatísticas e o fluxo CSV em lote estão implementados. Extração automatizada, validação semântica de tokens, editor gráfico e reconstrução ainda são etapas futuras.
+A inspeção básica, o inventário, o modelo, a exportação de JSON previamente extraído, a mesclagem segura, a validação estrutural, avisos conservadores sobre diferenças na quantidade de `∠` e quebras de linha, as estatísticas, o fluxo CSV em lote e o editor gráfico estão implementados. Extração automatizada, interpretação semântica dos marcadores e reconstrução ainda são etapas futuras.
 
 ## Ferramentas externas
 

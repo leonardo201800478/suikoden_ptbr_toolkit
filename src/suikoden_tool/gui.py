@@ -340,7 +340,7 @@ class TranslationApp:
         self.selected_bundles = tuple(found)
         details = [f"Encontrado: {p.name} ({p.stat().st_size:,} bytes)" for p in found]
         details.extend(f"Ausente: {name}" for name in missing)
-        self.extraction_files.set("\\n".join(details) if details else f"Nenhum bundle encontrado em: {assets_dir}")
+        self.extraction_files.set("\n".join(details) if details else f"Nenhum bundle encontrado em: {assets_dir}")
         self.extraction_status.set(f"{len(found)}/4 bundles encontrados." if missing else "4/4 bundles encontrados. Pronto para extrair.")
         return self.selected_bundles
 

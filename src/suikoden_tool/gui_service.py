@@ -69,13 +69,13 @@ def _atomic_write(path: Path, catalog: dict[str, Any]) -> None:
             temporary.unlink()
 
 
-def suggest_translation(original: str, context: str = "") -> str:
+def suggest_translation(original: str, context: str = "", api_key: str | None = None) -> str:
     """Pede uma sugestão a uma API compatível com OpenAI, sem gravar no catálogo.
 
     Configure OPENAI_API_KEY no ambiente. OPENAI_MODEL é opcional.
     O texto enviado é somente a entrada atual e o contexto fornecido.
     """
-    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    api_key = (api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
     if not api_key:
         raise ValueError(
             "OPENAI_API_KEY não configurada. Defina a variável de ambiente e reabra a ferramenta."

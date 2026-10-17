@@ -6,6 +6,7 @@ from pathlib import Path
 
 from suikoden_tool.bundle_inspector import inspect_bundle, inventory_bundles
 from suikoden_tool.text_batch import export_translation_batch, import_translation_batch
+from suikoden_tool.text_discovery import discover_text_assets
 from suikoden_tool.text_catalog import (
     _read_json,
     catalog_stats,
@@ -47,6 +48,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     text_commands = commands.add_parser("text", help="Operações com textos extraídos")
     text_subcommands = text_commands.add_subparsers(dest="text_command", required=True)
+
+    p = text_subcommands.add_parser(
+        "discover", help="Inventaria TextAssets e amostras de texto em bundles"
+    )
+    p.add_argument("--directory", required=True, type=Path, help="Pasta com bundles")
+    p.add_argument("--output", required=True, type=Path, help="Relatório JSON de descoberta")
+    p.add_argument("--tool", type=Path, help="Caminho do UnityDataTool.exe")
+    p.add_argument("--no-recursive", action="store_true", help="Não pesquisar subpastas")
+    p.add_argument("--timeout", type=int, default=120, help="Tempo limite por chamada em segundos")
 
     p = text_subcommands.add_parser(
         "extract", help="Extrai JSON textList de um TextAsset via UnityDataTool"
@@ -117,6 +127,15 @@ def main() -> None:
                 args.output,
             )
             print(f"Bundles encontrados: {len(records)}. Inventário: {args.output}")
+        elif args.command == "text" and args.text_command == "discover":
+            report = discover_text_assets(
+                args.directory,
+                executable=args.tool,
+                recursive=not args.no_recursive,
+                timeout=args.timeout,
+            )
+            _write_json(report, args.output)
+            print(f"Bundles analisados: {report['bundle_count']}. Relatório: {args.output.resolve()}")
         elif args.command == "text" and args.text_command == "extract":
             result = extract_textasset_json(
                 args.bundle,

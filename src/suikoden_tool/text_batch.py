@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from suikoden_tool.text_catalog import VALID_STATUSES, validate_catalog
+from suikoden_tool.text_catalog import validate_catalog
 
 CSV_FIELDS = ("id", "id_type", "original", "translation", "status")
 

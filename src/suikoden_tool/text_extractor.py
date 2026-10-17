@@ -30,23 +30,43 @@ def _loads_textasset_json(script: str) -> Any:
         in_string = False
         escaped = False
         changed = False
-        for char in script:
+        index = 0
+        while index < len(script):
+            char = script[index]
             code = ord(char)
             if in_string and code < 0x20:
                 repaired.append(f"\\u{code:04x}")
                 changed = True
                 escaped = False
+                index += 1
                 continue
-            repaired.append(char)
             if in_string:
                 if escaped:
+                    repaired.append(char)
                     escaped = False
                 elif char == "\\":
+                    repaired.append(char)
                     escaped = True
                 elif char == '"':
-                    in_string = False
-            elif char == '"':
-                in_string = True
+                    lookahead = index + 1
+                    while lookahead < len(script) and script[lookahead].isspace():
+                        lookahead += 1
+                    next_char = script[lookahead] if lookahead < len(script) else ""
+                    if next_char and next_char not in ",}]:}":
+                        # Aspas literais dentro de diálogos aparecem sem escape em
+                        # alguns TextAssets. Não podem encerrar a string JSON.
+                        repaired.append('\\\\"')
+                        changed = True
+                    else:
+                        repaired.append(char)
+                        in_string = False
+                else:
+                    repaired.append(char)
+            else:
+                repaired.append(char)
+                if char == '"':
+                    in_string = True
+            index += 1
         if changed:
             try:
                 return json.loads("".join(repaired))

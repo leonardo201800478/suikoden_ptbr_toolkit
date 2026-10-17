@@ -2,9 +2,14 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Any
 
 from suikoden_tool.bundle_inspector import inspect_bundle, inventory_bundles
+from suikoden_tool.text_catalog import (
+    _read_json,
+    catalog_stats,
+    export_text_catalog,
+    validate_catalog,
+)
 from suikoden_tool.translation_schema import make_translation_entry
 
 
@@ -15,48 +20,6 @@ def _write_json(data: object, output: Path) -> None:
         json.dumps(data, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-
-
-def _export_text_catalog(source: Path, output: Path, target_language: str) -> dict[str, Any]:
-    """Converte um TextAsset JSON com textList para um catálogo traduzível."""
-    if source.resolve() == output.resolve():
-        raise ValueError("A entrada e a saída não podem ser o mesmo arquivo.")
-
-    try:
-        data = json.loads(source.read_text(encoding="utf-8-sig"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"JSON de entrada inválido: {exc}") from exc
-
-    if not isinstance(data, dict) or not isinstance(data.get("textList"), list):
-        raise ValueError("Formato inválido: esperado um objeto JSON com uma lista 'textList'.")
-
-    exported = []
-    seen_ids = set()
-    for index, entry in enumerate(data["textList"]):
-        if not isinstance(entry, dict):
-            raise ValueError(f"Entrada {index} não é um objeto JSON.")
-        if "id" not in entry or "text" not in entry:
-            raise ValueError(f"Entrada {index} precisa conter 'id' e 'text'.")
-        if not isinstance(entry["text"], str):
-            raise ValueError(f"O texto da entrada {index} precisa ser uma string.")
-        entry_id = entry["id"]
-        if entry_id in seen_ids:
-            raise ValueError(f"ID duplicado no catálogo de origem: {entry_id!r}.")
-        seen_ids.add(entry_id)
-        exported.append({
-            "id": entry_id,
-            "original": entry["text"],
-            "translation": "",
-            "status": "pending",
-        })
-
-    return {
-        "schema_version": 1,
-        "resource": source.stem,
-        "source_language": "en",
-        "target_language": target_language,
-        "entries": exported,
-    }
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -78,10 +41,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     text_commands = commands.add_parser("text", help="Operações com textos extraídos")
     text_subcommands = text_commands.add_subparsers(dest="text_command", required=True)
-    p = text_subcommands.add_parser("export", help="Exporta textList JSON para catálogo")
+
+    p = text_subcommands.add_parser("export", help="Cria ou atualiza catálogo sem perder traduções")
     p.add_argument("--input", required=True, type=Path, help="JSON extraído do TextAsset")
     p.add_argument("--output", required=True, type=Path, help="Catálogo JSON de saída")
     p.add_argument("--target-language", default="pt-BR", help="Idioma de destino (padrão: pt-BR)")
+
+    p = text_subcommands.add_parser("validate", help="Valida um catálogo de tradução")
+    p.add_argument("--input", required=True, type=Path, help="Catálogo JSON")
+    p.add_argument("--source", type=Path, help="JSON extraído para comparar textos de origem")
+
+    p = text_subcommands.add_parser("stats", help="Mostra estatísticas do catálogo")
+    p.add_argument("--input", required=True, type=Path, help="Catálogo JSON")
     return parser
 
 
@@ -97,14 +68,26 @@ def main() -> None:
                 _write_json(result, args.output)
         elif args.command == "inventory":
             records = inventory_bundles(args.directory)
-            _write_json({"schema_version": 1, "bundle_count": len(records), "bundles": records}, args.output)
+            _write_json(
+                {"schema_version": 1, "bundle_count": len(records), "bundles": records},
+                args.output,
+            )
             print(f"Bundles encontrados: {len(records)}. Inventário: {args.output}")
         elif args.command == "text" and args.text_command == "export":
-            catalog = _export_text_catalog(args.input, args.output, args.target_language)
-            _write_json(catalog, args.output)
-            print(f"Catálogo criado: {args.output.resolve()}")
-            print(f"Entradas exportadas: {len(catalog['entries'])}")
-            print(f"Idioma de destino: {args.target_language}")
+            result = export_text_catalog(args.input, args.output, args.target_language)
+            print(f"Catálogo atualizado: {args.output.resolve()}")
+            print(f"Entradas novas: {result['new']}")
+            print(f"Traduções preservadas: {result['preserved']}")
+            print(f"Textos de origem alterados (revisão necessária): {result['changed']}")
+            print(f"Entradas preservadas como órfãs: {result['orphaned']}")
+        elif args.command == "text" and args.text_command == "validate":
+            report = validate_catalog(_read_json(args.input), args.source)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            if not report["valid"]:
+                parser.exit(1, "Validação reprovada: corrija os erros listados.\n")
+        elif args.command == "text" and args.text_command == "stats":
+            stats = catalog_stats(_read_json(args.input))
+            print(json.dumps(stats, ensure_ascii=False, indent=2))
         else:
             payload = {
                 "schema_version": 1,

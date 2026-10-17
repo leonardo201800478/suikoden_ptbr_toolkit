@@ -788,6 +788,7 @@ class TranslationApp:
         search_entry.pack(side="left", fill="x", expand=True, padx=(8, 0))
         search_entry.insert(0, "")
         ttk.Label(controls, text="Buscar por ID ou texto").pack(side="right", padx=(8, 0))
+        ttk.Button(controls, text="Importar todos os textos traduzidos para o editor", command=lambda: import_translations_into_editor()).pack(side="right", padx=(8, 0))
 
         table_frame = ttk.Frame(window, padding=(12, 0, 12, 8))
         table_frame.pack(fill="both", expand=True)
@@ -823,6 +824,83 @@ class TranslationApp:
 
         row_keys: dict[str, tuple[type, Any]] = {}
         ordered_keys = sorted(all_keys, key=compare_sort)
+
+        def import_translations_into_editor() -> None:
+            if self.catalog_path is None or not self.catalog or not self.entries:
+                messagebox.showwarning(
+                    "Editor sem catálogo",
+                    "Antes de importar, abra o catálogo de trabalho na aba Editor.",
+                    parent=window,
+                )
+                return
+            if self.dirty and not self._confirm_discard():
+                return
+
+            editor_by_id: dict[tuple[type, Any], dict[str, Any]] = {}
+            for editor_entry in self.entries:
+                if isinstance(editor_entry, dict) and "id" in editor_entry:
+                    editor_by_id[self._key(editor_entry)] = editor_entry
+
+            matched = [key for key in translated_entries if key in editor_by_id]
+            if not matched:
+                messagebox.showerror(
+                    "Nenhum ID correspondente",
+                    "O JSON traduzido não possui IDs correspondentes às entradas do catálogo aberto no editor.",
+                    parent=window,
+                )
+                return
+            blank = [key for key in matched if not translated_entries[key].get("text", "").strip()]
+            if blank:
+                messagebox.showwarning(
+                    "Importação cancelada",
+                    f"Foram encontrados {len(blank)} textos traduzidos vazios. "
+                    "Preencha-os ou revise o JSON antes de importar; nenhum texto foi alterado.",
+                    parent=window,
+                )
+                return
+            if not messagebox.askyesno(
+                "Confirmar importação",
+                f"Importar {len(matched)} textos do JSON traduzido para o catálogo aberto?\\n\\n"
+                "Os textos correspondentes existentes no editor serão substituídos e salvos como traduzidos. "
+                "IDs sem correspondência serão ignorados. Esta ação não pode ser desfeita automaticamente.",
+                parent=window,
+            ):
+                return
+
+            try:
+                for key in matched:
+                    entry = editor_by_id[key]
+                    saved = save_entry(
+                        self.catalog_path,
+                        entry["id"],
+                        translated_entries[key]["text"],
+                        "translated",
+                    )
+                    entry.update(saved)
+            except (OSError, ValueError) as exc:
+                messagebox.showerror(
+                    "Falha durante a importação",
+                    f"A importação foi interrompida: {exc}\\n\\n"
+                    "Verifique o catálogo antes de continuar, pois entradas anteriores podem já ter sido salvas.",
+                    parent=window,
+                )
+                self.refresh_list()
+                self._update_stats()
+                return
+
+            self.dirty = False
+            self.refresh_list()
+            self._update_stats()
+            if self.current_id is not None:
+                current = self._current_entry()
+                if current is not None:
+                    self._display_entry(current)
+            self.message_var.set(f"{len(matched)} textos importados do JSON traduzido.")
+            messagebox.showinfo(
+                "Importação concluída",
+                f"Foram importados {len(matched)} textos por ID para o catálogo do editor.",
+                parent=window,
+            )
 
         def set_detail(widget: tk.Text, text: str) -> None:
             widget.configure(state="normal")

@@ -30,9 +30,17 @@ def _read_payload(source: Path) -> tuple[Any, str, str]:
                 "asset_name": asset_name,
                 "content": script,
             }, asset_name, script
+        position = exc.pos
+        start = max(0, position - 100)
+        end = min(len(script), position + 100)
+        context = script[start:end]
+        codepoints = " ".join(
+            f"U+{ord(char):04X}" for char in script[max(0, position - 8):min(len(script), position + 8)]
+        )
         raise ValueError(
             f"{source.name}: m_Script de {asset_name!r} não pode ser convertido em JSON "
-            f"(linha {exc.lineno}, coluna {exc.colno}: {exc.msg}). "
+            f"(linha {exc.lineno}, coluna {exc.colno}, posição {position}: {exc.msg}). "
+            f"Contexto escapado: {context!r}. Caracteres próximos: {codepoints}. "
             "Nenhum JSON de saída foi gravado; o dump original foi preservado."
         ) from exc
 
@@ -112,7 +120,18 @@ def convert_textasset_batch(
             results.append(convert_textasset_dump(source, destination, overwrite=overwrite))
         except (OSError, ValueError) as exc:
             errors.append({"source": str(source), "error": str(exc)})
+    # Log persistente para diagnóstico; o contexto já vem escapado e não altera a origem.
+    log_path = output_dir / "logs" / "conversao_textasset.jsonl"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", encoding="utf-8", newline="\\n") as log_file:
+        for item in results:
+            if "batch_errors" not in item:
+                log_file.write(json.dumps({"status": "ok", **item}, ensure_ascii=False) + "\\n")
+        for error in errors:
+            log_file.write(json.dumps({"status": "error", **error}, ensure_ascii=False) + "\\n")
+    # Mantém retorno dos sucessos e erros estruturados para a GUI/CLI.
     if errors:
-        # Mantém retorno dos sucessos e erros estruturados para a GUI/CLI.
-        results.append({"batch_errors": errors})
+        results.append({"batch_errors": errors, "log_path": str(log_path)})
+    else:
+        results.append({"log_path": str(log_path)})
     return results

@@ -24,6 +24,7 @@ from suikoden_tool.gui_service import (
     suggest_translation,
 )
 from suikoden_tool.dump_catalog_import import import_dump_to_catalog
+from suikoden_tool.textasset_json_converter import convert_textasset_batch
 from suikoden_tool.text_catalog import export_text_catalog
 from suikoden_tool.text_discovery import discover_text_assets
 from suikoden_tool.textasset_dump_export import export_textasset_dumps
@@ -592,62 +593,42 @@ class TranslationApp:
         self.game_directory_status.configure(text=detail)
 
     def choose_textasset_dumps(self) -> None:
-        """Converte dumps TextAsset em catálogos JSON editáveis, sem alterar os dumps."""
+        """Converte dumps para JSON validado em output/json_convertidos."""
         filenames = filedialog.askopenfilenames(
-            title="Selecionar dumps TextAsset exportados para o UABEA",
+            title="Selecionar os seis dumps TextAsset (.txt)",
             filetypes=(("Dumps TextAsset", "*.txt"), ("Todos os arquivos", "*.*")),
         )
         if not filenames:
             return
+        output_dir = Path.cwd() / "output" / "json_convertidos"
         overwrite = messagebox.askyesno(
-            "Substituir catálogos existentes?",
-            "Deseja substituir os arquivos .catalog.json já existentes?\\n\\n"
-            "Isso sobrescreverá as traduções que estiverem nesses catálogos. "
-            "Escolha Não para manter os arquivos existentes.",
+            "Substituir JSON existentes?",
+            f"Os arquivos JSON serão organizados em:\\n{output_dir}\\n\\n"
+            "Se já houver um JSON com o mesmo nome, ele será substituído. Continuar?",
             parent=self.root,
         )
-        results: list[dict[str, Any]] = []
-        failures: list[str] = []
-        skipped_licenses = 0
-        for filename in filenames:
-            source_path = Path(filename)
-            # Licenças legais não são catálogos de diálogo; manter os dumps sem
-            # apresentá-los como falhas da importação de textos traduzíveis.
-            if source_path.name.casefold().startswith(("license_xb-", "license_steam-", "license_swps-")):
-                skipped_licenses += 1
-                continue
-            try:
-                results.append(import_dump_to_catalog(source_path, overwrite=overwrite))
-            except (OSError, ValueError) as exc:
-                failures.append(f"{source_path.name}: {exc}")
-        if results:
-            summary = "\n".join(
-                f"{item['asset_name']}: {item['entries']} entradas → {Path(item['catalog_path']).name}"
-                for item in results
-            )
-            if failures:
-                summary += "\n\nArquivos que precisam de análise específica:\n" + "\n".join(failures)
-            messagebox.showinfo(
-                "Importação de dumps concluída",
-                f"Catálogos criados: {len(results)}\n\n{summary}\n\n"
-                "Os dumps originais foram mantidos intactos.",
-                parent=self.root,
-            )
-            if len(results) == 1:
-                self.open_catalog(Path(results[0]["catalog_path"]))
-            else:
-                messagebox.showinfo(
-                    "Abrir catálogo",
-                    "Cada TextAsset gera seu próprio catálogo para evitar colisões de IDs. "
-                    "Use 'Abrir catálogo' para editar cada arquivo criado.",
-                    parent=self.root,
-                )
-        elif failures:
+        if not overwrite:
+            return
+        try:
+            results = convert_textasset_batch([Path(name) for name in filenames], output_dir, overwrite=True)
+        except (OSError, ValueError) as exc:
             messagebox.showerror(
-                "Nenhum catálogo criado",
-                "\n\n".join(failures),
+                "Conversão interrompida",
+                f"{exc}\\n\\nOs dumps originais não foram alterados.",
                 parent=self.root,
             )
+            return
+        summary = "\\n".join(
+            f"{Path(item['source']).name} → {Path(item['output']).relative_to(output_dir).as_posix()} "
+            f"({item['entries']} entradas)"
+            for item in results
+        )
+        messagebox.showinfo(
+            "Conversão concluída",
+            f"Arquivos JSON validados: {len(results)}\\nPasta: {output_dir}\\n\\n{summary}\\n\\n"
+            "Os arquivos .txt originais foram preservados.",
+            parent=self.root,
+        )
 
     def choose_catalog(self) -> None:
         filename = filedialog.askopenfilename(

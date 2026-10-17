@@ -52,7 +52,7 @@ def discover_text_assets(
             )
             objects = json.loads(stdout)
             if not isinstance(objects, list):
-                raise ValueError("objectlist não retornou uma lista JSON.")
+                raise TypeError("objectlist não retornou uma lista JSON.")
             record["object_count"] = len(objects)
             textassets = [
                 obj for obj in objects

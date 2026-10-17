@@ -602,10 +602,15 @@ class TranslationApp:
         results: list[dict[str, Any]] = []
         failures: list[str] = []
         for filename in filenames:
+            source_path = Path(filename)
+            # Licenças legais não são catálogos de diálogo; manter os dumps sem
+            # apresentá-los como falhas da importação de textos traduzíveis.
+            if source_path.name.casefold().startswith(("license_xb-", "license_steam-", "license_swps-")):
+                continue
             try:
-                results.append(import_dump_to_catalog(Path(filename)))
+                results.append(import_dump_to_catalog(source_path))
             except (OSError, ValueError) as exc:
-                failures.append(f"{Path(filename).name}: {exc}")
+                failures.append(f"{source_path.name}: {exc}")
         if results:
             summary = "\n".join(
                 f"{item['asset_name']}: {item['entries']} entradas → {Path(item['catalog_path']).name}"

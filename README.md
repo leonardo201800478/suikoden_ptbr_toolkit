@@ -176,3 +176,10 @@ AssetRipper, UABEA e UnityDataTool são auxiliares locais, não dependências ob
 ## Licença e direitos
 
 O código-fonte do toolkit é distribuído sob MIT conforme `LICENSE`. Isso não concede direitos sobre os jogos, textos, imagens, áudio ou arquivos de Suikoden. O projeto é independente e não é afiliado nem endossado pela Konami.
+
+
+### Fluxo gráfico de extração dos quatro bundles
+
+Na GUI, abra a guia **Extração dos 4 bundles**, selecione exatamente os quatro arquivos `.bundle` e clique em **Extrair e abrir 4 guias**. O toolkit analisa cada bundle isoladamente, extrai o TextAsset JSON que contém `textList`, gera os catálogos em `work/bundle_analysis/catalogs` e abre uma guia independente por recurso. Os JSONs extraídos ficam em `work/bundle_analysis/sources`. Se houver vários TextAssets compatíveis, a ferramenta prefere `text_add_en`; caso contrário, escolhe o que contém mais entradas e registra um aviso. Confira essa identificação antes de iniciar a tradução. A extração não modifica os bundles.
+
+A mesma guia permite informar e salvar localmente a chave da API OpenAI. O valor é guardado em `%APPDATA%\\SuikodenPTBRToolkit\\settings.json` em texto simples; restrinja o acesso ao arquivo e não o compartilhe. A API é cobrada separadamente da assinatura do ChatGPT. Também é possível usar a variável de ambiente `OPENAI_API_KEY`.

@@ -60,36 +60,69 @@ Cada arquivo `lote_NNN.json` conserva as propriedades de nível superior do JSON
 
 ## 5. Prompt principal para traduzir um lote
 
-Copie o prompt abaixo no chat que receberá o lote. Anexe o arquivo JSON do lote e, quando possível, o glossário do projeto.
+Copie este prompt no chat que receberá o lote. Anexe o JSON do lote e, quando possível, o glossário do projeto. Este prompt é a referência principal para tradução assistida por IA.
 
 ```text
-Você é responsável pela tradução PT-BR de Suikoden I & II HD Remaster.
+Vamos continuar o projeto de tradução PT-BR de Suikoden I & II HD Remaster.
 
-Traduza o arquivo JSON de lote anexado respeitando rigorosamente as instruções:
+REFERÊNCIAS OBRIGATÓRIAS
+- Consulte e aplique o glossário aprovado:
+  https://github.com/leonardo201800478/suikoden_ptbr_toolkit/blob/feature/translation-gui/docs/GLOSSARIO_TRADUCAO_PTBR.md
+- Siga o fluxo e as regras do projeto:
+  https://github.com/leonardo201800478/suikoden_ptbr_toolkit/blob/feature/translation-gui/docs/FLUXO_LOTES_E_PROMPTS_TRADUCAO.md
 
-- Traduza apenas os valores do campo "text".
-- Preserve exatamente cada "id", a ordem das entradas, o nome e a estrutura das propriedades e a quantidade de entradas.
-- Não altere, remova, invente ou reordene IDs.
-- Preserve todos os marcadores técnicos, inclusive ♂㈱, ♂①, ♂②, ♂⑩, ∠, ∨, ∨☆, ＬＶ２, ＬＶ３, ＬＶ４, ★☆, ★★☆☆, ★★★☆☆☆, ◎1, ◎2, ◎5 e qualquer símbolo desconhecido ou ponto de interrogação literal (?).
-- Não confunda marcadores com texto traduzível. Não transforme marcadores em quebras de linha reais.
-- Use o glossário aprovado do projeto e mantenha a mesma terminologia entre Suikoden I e II:
-  STR = FOR; DEX = DES; PROT = PROT; SPD = VEL; MAG = MAG; LCK = SOR;
-  "Add to party." = "Adicionar ao grupo.";
-  "Don't add to party." = "Não adicionar ao grupo."
-- Use português brasileiro natural, consistente com um RPG clássico, respeitando o tom e o espaço disponível.
-- Não invente contexto que não esteja sustentado pelo texto. Se houver ambiguidade relevante, mantenha uma tradução conservadora e liste a dúvida separadamente pelo ID.
-- Não acrescente comentários dentro do JSON.
-- Devolva o arquivo completo como JSON válido, sem reticências, sem omitir entradas e sem texto explicativo antes ou depois do JSON. Preserve as propriedades de nível superior do arquivo de entrada.
+Vou enviar um arquivo JSON de um lote. Cada entrada possui um id e um campo text.
 
-Antes de responder, confira:
-1. A quantidade de entradas é idêntica à do arquivo recebido.
-2. A sequência de IDs é exatamente a mesma, inclusive tipos e valores.
-3. Nenhum ID está duplicado ou ausente.
-4. Todos os marcadores técnicos de cada texto foram preservados na mesma ordem e quantidade.
-5. Cada entrada contém os campos esperados e o JSON pode ser analisado.
-6. Nenhum texto foi deixado em inglês sem motivo; nomes próprios e termos intencionalmente originais podem permanecer.
+OBJETIVO
+Produzir uma tradução brasileira natural, consistente e fiel ao sentido, ao tom e à intenção do texto original, adequada a um RPG clássico. Priorize a voz dos personagens, a clareza em jogo e a fidelidade ao autor, sem traduções mecânicas palavra por palavra quando uma adaptação natural preservar melhor o sentido.
 
-Se não puder devolver o lote inteiro com segurança numa única resposta, não o trunque: informe os IDs inicial e final da parte que consegue tratar e peça para continuar em partes controladas por ID. Nunca alegue que validou uma condição sem realmente verificá-la.
+REGRAS OBRIGATÓRIAS
+
+1. Altere somente o valor do campo "text". Não modifique IDs, tipos dos IDs, ordem, quantidade de entradas, nomes de propriedades ou qualquer outra parte da estrutura JSON.
+
+2. Preserve literalmente todos os marcadores técnicos, na mesma ordem, quantidade e posição lógica. Incluem, sem se limitar a:
+   ♂㈱, ♂①, ♂②, ♂⑩, ∠, ∨, ∨☆, ＬＶ２, ＬＶ３, ＬＶ４, sequências de estrelas, indicadores ◎ como ◎1, ◎2, ◎5, símbolos desconhecidos, pontuação estrutural e o caractere literal ?.
+   Não invente marcadores; não remova nem substitua símbolos por parecerem estranhos.
+
+3. Preserve as quebras e os controles de diálogo. Não transforme marcadores técnicos em quebras reais nem remova marcadores para melhorar a leitura. O caractere de controle pertence ao texto e deve permanecer exatamente preservado.
+
+4. Não traduza nem adapte nomes próprios, nomes de personagens, lugares, localidades, itens/equipamentos, nomes de inimigos/monstros ou outros nomes específicos do universo do jogo. Mantenha a grafia original desses nomes. Traduza o texto comum ao redor deles. Se não for possível distinguir com segurança um nome próprio de um termo descritivo, mantenha o original e registre a dúvida separadamente por ID.
+
+5. Consulte o glossário obrigatório e reutilize as formas aprovadas nos dois jogos sempre que o conceito for equivalente. Não crie sinônimos por preferência estilística nem altere uma decisão aprovada sem apontar a ocorrência para revisão.
+
+6. Não use gírias contemporâneas, memes ou expressões passageiras. Prefira português brasileiro natural e atemporal, compatível com o cenário de fantasia e aventura.
+
+7. Adapte ditados, trocadilhos e piadas ao português brasileiro quando a tradução literal perder o efeito original. Preserve a intenção, o humor, a informação e a personalidade da fala; não invente uma piada nova que altere o sentido. Registre separadamente adaptações que possam mudar significativamente a referência original.
+
+8. Quando for possível identificar a voz do personagem pelo próprio texto ou pelo contexto disponível, ajuste vocabulário, ritmo, formalidade e emoção a essa voz. Não atribua personalidade, gênero, relação entre personagens ou contexto narrativo que não esteja sustentado pelas informações disponíveis.
+
+9. Não force formalidade nem linguagem politicamente correta. Preserve o grau de rudeza, humor, ironia, hostilidade, intimidade ou solenidade do original, sem censurar nem intensificar gratuitamente o conteúdo.
+
+10. Busque fidelidade à intenção do autor original, não à ordem literal das palavras. Use frases idiomáticas em português brasileiro, mantendo informações, implicações e tom. Não acrescente explicações narrativas nem elimine elementos do original.
+
+11. Não omita entradas, não resuma e não trunque o lote. Devolva todas as entradas. Se o lote for grande demais para uma resposta segura, trabalhe em partes contíguas identificadas pelos IDs, sem sobreposição, lacunas, duplicações ou alteração da ordem relativa.
+
+12. Em caso de ambiguidade, não invente contexto. Faça a tradução mais conservadora possível e registre a dúvida separadamente por ID. Mantenha nomes e termos incertos na forma original até que haja evidência suficiente.
+
+13. Não acrescente comentários, notas, justificativas ou campos de revisão dentro do JSON. As dúvidas devem aparecer depois do JSON, em uma seção separada intitulada "Ambiguidades para revisão", com ID, trecho original e motivo da dúvida. Se não houver dúvidas relevantes, informe "Nenhuma ambiguidade relevante identificada" fora do JSON.
+
+14. A resposta principal deve ser um JSON válido, sem comentários inseridos no documento. Preserve as propriedades de nível superior existentes no arquivo de entrada. Não use reticências para substituir entradas e não inclua introdução ou explicação antes do JSON.
+
+15. Não declare que realizou validações que não executou. Antes de responder, confira efetivamente, na medida permitida pelo conteúdo disponível:
+   - se a quantidade de entradas e a sequência de IDs correspondem ao lote recebido;
+   - se os tipos e valores dos IDs foram mantidos;
+   - se os marcadores técnicos permaneceram na mesma ordem e quantidade em cada entrada;
+   - se nenhuma entrada foi omitida, duplicada ou truncada;
+   - se a saída é JSON sintaticamente válido;
+   - se nomes próprios foram mantidos e o glossário aplicado;
+   - se há textos comuns deixados sem tradução sem motivo aparente.
+
+FORMATO DA RESPOSTA
+1. Primeiro, entregue o JSON completo em um único bloco de código json, sem comentários ou notas dentro dele.
+2. Depois do bloco JSON, apresente "Ambiguidades para revisão" com os IDs e dúvidas encontradas, ou declare que não foram identificadas ambiguidades relevantes.
+3. Resuma as validações somente se elas tiverem sido realmente realizadas. Se alguma checagem não puder ser feita, informe claramente qual ficou pendente.
+
+Comece analisando o arquivo JSON anexado e traduza o lote segundo estas regras.
 ```
 
 ## 6. Prompt de auditoria do lote traduzido

@@ -34,6 +34,13 @@ FG = "#e8eaf0"
 MUTED = "#a0a6b5"
 ACCENT = "#8b7cff"
 
+TARGET_BUNDLE_NAMES = (
+    "03cf0288ba3ecaca0776d7fadf1f0bb6.bundle",
+    "0573e2f60d0cda7892d60f38dfd7282c.bundle",
+    "49d65af6f8fea7a9e8008c6b2c688fc3.bundle",
+    "700bf7ec8ded4a20613b92988e3f8142.bundle",
+)
+
 
 class TranslationApp:
     """Editor de catálogo com lista, filtros, salvamento seguro e sugestão opcional de IA."""
@@ -69,6 +76,7 @@ class TranslationApp:
         self._bind_events()
         self.game_directory_var.set(self.game_directory)
         self._refresh_game_directory_status()
+        self._locate_target_bundles()
         startup_catalog = catalog_path
         if startup_catalog is None:
             remembered = self.settings.get("last_catalog_path", "")
@@ -280,18 +288,9 @@ class TranslationApp:
         frame = ttk.Frame(self.extraction_tab, padding=18)
         frame.pack(fill="both", expand=True)
         frame.columnconfigure(0, weight=1)
-        ttk.Label(
-            frame, text="EXTRAÇÃO DOS QUATRO BUNDLES", style="Header.TLabel"
-        ).grid(row=0, column=0, sticky="w")
-        ttk.Label(
-            frame,
-            text=(
-                "Selecione exatamente os quatro arquivos .bundle. A extração é somente leitura; "
-                "os JSONs e catálogos serão gravados na pasta work\\bundle_analysis."
-            ),
-            style="Muted.TLabel",
-            wraplength=1050,
-        ).grid(row=1, column=0, sticky="w", pady=(8, 14))
+        frame.rowconfigure(6, weight=1)
+        ttk.Label(frame, text="CATÁLOGOS DOS QUATRO BUNDLES", style="Header.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(frame, text="Os quatro bundles são localizados automaticamente na pasta Addressables do jogo. Não é necessária seleção manual.", style="Muted.TLabel", wraplength=1050).grid(row=1, column=0, sticky="w", pady=(8, 14))
         key_frame = ttk.LabelFrame(frame, text="API OpenAI — sugestões de tradução", padding=10)
         key_frame.grid(row=2, column=0, sticky="ew", pady=(0, 14))
         key_frame.columnconfigure(1, weight=1)
@@ -299,41 +298,54 @@ class TranslationApp:
         self.api_key_var = tk.StringVar(value=self.settings.get("openai_api_key", ""))
         self.api_key_entry = ttk.Entry(key_frame, textvariable=self.api_key_var, show="•")
         self.api_key_entry.grid(row=0, column=1, sticky="ew")
-        ttk.Button(key_frame, text="Mostrar/ocultar", command=self._toggle_api_key).grid(
-            row=0, column=2, padx=6
-        )
-        ttk.Button(key_frame, text="Salvar chave", command=self._save_api_key).grid(
-            row=0, column=3
-        )
-        ttk.Label(
-            key_frame,
-            text="A chave é salva localmente em settings.json. Não compartilhe esse arquivo.",
-            style="Muted.TLabel",
-        ).grid(row=1, column=1, columnspan=3, sticky="w", pady=(6, 0))
+        ttk.Button(key_frame, text="Mostrar/ocultar", command=self._toggle_api_key).grid(row=0, column=2, padx=6)
+        ttk.Button(key_frame, text="Salvar chave", command=self._save_api_key).grid(row=0, column=3)
+        ttk.Label(key_frame, text="A chave é salva localmente em settings.json. Não compartilhe esse arquivo.", style="Muted.TLabel").grid(row=1, column=1, columnspan=3, sticky="w", pady=(6, 0))
         actions = ttk.Frame(frame)
         actions.grid(row=3, column=0, sticky="ew", pady=(0, 10))
-        ttk.Button(actions, text="Selecionar os 4 bundles…", command=self._choose_bundles).pack(side="left")
-        ttk.Button(
-            actions, text="Extrair e abrir 4 guias", style="Accent.TButton",
-            command=self._start_extraction,
-        ).pack(side="left", padx=8)
-        self.extraction_files = tk.StringVar(value="Nenhum bundle selecionado.")
-        ttk.Label(frame, textvariable=self.extraction_files, wraplength=1100).grid(
-            row=4, column=0, sticky="ew", pady=(0, 10)
-        )
-        self.extraction_status = tk.StringVar(value="Aguardando seleção dos arquivos.")
-        ttk.Label(frame, textvariable=self.extraction_status).grid(
-            row=5, column=0, sticky="ew", pady=(0, 8)
-        )
-        self.extraction_log = tk.Text(
-            frame, height=15, wrap="word", bg=PANEL, fg=FG, insertbackground=FG,
-            relief="flat", padx=10, pady=8,
-        )
+        ttk.Button(actions, text="Localizar os 4 bundles", command=self._locate_target_bundles).pack(side="left")
+        ttk.Button(actions, text="Extrair catálogos", style="Accent.TButton", command=self._start_extraction).pack(side="left", padx=8)
+        ttk.Button(actions, text="Reconstruir e instalar no jogo", command=self._rebuild_bundles).pack(side="left")
+        self.extraction_files = tk.StringVar(value="Informe/aplique a pasta do jogo para localizar os bundles.")
+        ttk.Label(frame, textvariable=self.extraction_files, wraplength=1100).grid(row=4, column=0, sticky="ew", pady=(0, 10))
+        self.extraction_status = tk.StringVar(value="Aguardando localização dos bundles.")
+        ttk.Label(frame, textvariable=self.extraction_status).grid(row=5, column=0, sticky="ew", pady=(0, 8))
+        self.extraction_log = tk.Text(frame, height=15, wrap="word", bg=PANEL, fg=FG, insertbackground=FG, relief="flat", padx=10, pady=8)
         self.extraction_log.grid(row=6, column=0, sticky="nsew")
-        frame.rowconfigure(6, weight=1)
-        self.selected_bundles: tuple[Path, ...] = ()
+        self.selected_bundles = ()
         self._api_key_visible = False
+        self._locate_target_bundles()
 
+    def _locate_target_bundles(self) -> tuple[Path, ...]:
+        if not self.game_directory:
+            self.selected_bundles = ()
+            self.extraction_files.set("Defina primeiro a pasta de instalação do jogo.")
+            self.extraction_status.set("Pasta do jogo não configurada.")
+            return ()
+        game_dir = Path(self.game_directory).expanduser()
+        if not game_dir.is_dir():
+            self.selected_bundles = ()
+            self.extraction_files.set("A pasta configurada não existe. Selecione novamente a pasta do jogo.")
+            self.extraction_status.set("Pasta do jogo não encontrada.")
+            return ()
+        assets_dir = find_game_assets_directory(game_dir)
+        found = []
+        missing = []
+        for name in TARGET_BUNDLE_NAMES:
+            candidate = assets_dir / name
+            if candidate.is_file():
+                found.append(candidate.resolve())
+            else:
+                missing.append(name)
+        self.selected_bundles = tuple(found)
+        details = [f"Encontrado: {p.name} ({p.stat().st_size:,} bytes)" for p in found]
+        details.extend(f"Ausente: {name}" for name in missing)
+        self.extraction_files.set("\\n".join(details) if details else f"Nenhum bundle encontrado em: {assets_dir}")
+        self.extraction_status.set(f"{len(found)}/4 bundles encontrados." if missing else "4/4 bundles encontrados. Pronto para extrair.")
+        return self.selected_bundles
+
+    def _rebuild_bundles(self) -> None:
+        messagebox.showwarning("Reconstrução ainda não implementada", "A extração está disponível, mas a reinserção/reconstrução de bundles Unity Addressables ainda não possui um motor validado. Nenhum arquivo foi alterado. Precisamos implementar e testar a reinserção em cópias, incluindo metadados e CRC, antes de instalar arquivos reconstruídos.", parent=self.root)
     def _toggle_api_key(self) -> None:
         self._api_key_visible = not self._api_key_visible
         self.api_key_entry.configure(show="" if self._api_key_visible else "•")
@@ -356,31 +368,10 @@ class TranslationApp:
             parent=self.root,
         )
 
-    def _choose_bundles(self) -> None:
-        initial = self.game_directory or str(Path.cwd())
-        selected = filedialog.askopenfilenames(
-            parent=self.root,
-            title="Selecione os quatro arquivos .bundle",
-            initialdir=initial,
-            filetypes=(("Bundles Unity", "*.bundle"),),
-        )
-        if not selected:
-            return
-        self.selected_bundles = tuple(Path(item).resolve() for item in selected)
-        self.extraction_files.set("\n".join(str(path) for path in self.selected_bundles))
-        if len(self.selected_bundles) != 4:
-            self.extraction_status.set(
-                f"Foram selecionados {len(self.selected_bundles)} arquivos; selecione exatamente 4."
-            )
-        else:
-            self.extraction_status.set("Quatro bundles selecionados. Pronto para extrair.")
-
     def _start_extraction(self) -> None:
-        if len(self.selected_bundles) != 4:
-            messagebox.showwarning(
-                "Seleção incompleta", "Selecione exatamente os quatro arquivos .bundle.",
-                parent=self.root,
-            )
+        bundles = self._locate_target_bundles()
+        if len(bundles) != 4:
+            messagebox.showwarning("Bundles incompletos", "A extração exige os quatro arquivos conhecidos na pasta do jogo. Confira a instalação e tente localizar novamente.", parent=self.root)
             return
         tool = Path(__file__).resolve().parents[2] / "tools" / "UnityDataTools" / "UnityDataTool.exe"
         try:
@@ -392,7 +383,7 @@ class TranslationApp:
         self.extraction_log.delete("1.0", "end")
         threading.Thread(
             target=self._extraction_worker,
-            args=(self.selected_bundles, executable),
+            args=(bundles, executable),
             daemon=True,
         ).start()
 
@@ -507,6 +498,7 @@ class TranslationApp:
         self.settings["game_directory"] = self.game_directory
         self.game_directory_var.set(self.game_directory)
         self._refresh_game_directory_status()
+        self._locate_target_bundles()
         self.message_var.set("Pasta do jogo salva nas configurações da ferramenta.")
 
     def _refresh_game_directory_status(self) -> None:

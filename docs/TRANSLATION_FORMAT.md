@@ -63,7 +63,7 @@ O exportador valida que a raiz contenha `textList`, que cada item seja um objeto
 - ID ausente na nova extração: mantém a entrada e tradução, marcando status `orphaned`.
 - Catálogo existente malformado, de outro recurso ou idioma: aborta sem modificar a saída.
 
-A atualização não apaga silenciosamente traduções. Mudanças de origem exigem revisão humana; não se deve considerar a tradução automaticamente correta.
+A atualização não apaga silenciosamente traduções. Mudanças de origem exigem revisão humana; não se deve considerar a tradução automaticamente correta. Depois de revisar manualmente a tradução para o novo texto, o responsável pode atualizar o status para `translated` ou `reviewed` e remover `source_changed` e `previous_original` para encerrar o alerta de revisão.
 
 ## 2. Esquema geral inicial
 

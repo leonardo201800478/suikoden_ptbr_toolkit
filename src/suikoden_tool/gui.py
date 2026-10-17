@@ -146,6 +146,7 @@ class TranslationApp:
             side="left", padx=(16, 0), pady=(5, 0)
         )
         ttk.Button(header, text="Abrir catálogo", command=self.choose_catalog).pack(side="right")
+        ttk.Button(header, text="Carregar JSON preparado", command=self.choose_prepared_text_json).pack(side="right", padx=(0, 8))
         ttk.Button(header, text="Importar dumps TextAsset", command=self.choose_textasset_dumps).pack(side="right", padx=(0, 8))
         self.file_label = ttk.Label(header, text="Nenhum catálogo aberto", style="Muted.TLabel")
         self.file_label.pack(side="right", padx=14)
@@ -591,6 +592,44 @@ class TranslationApp:
         else:
             detail = "Pasta válida; diretório Addressables StandaloneWindows64 não detectado ainda."
         self.game_directory_status.configure(text=detail)
+
+    def choose_prepared_text_json(self) -> None:
+        """Carrega JSONs text_gsd1_en/text_gsd2_en/text_add_en para catálogos editáveis."""
+        filenames = filedialog.askopenfilenames(
+            title="Selecionar JSONs de texto preparados",
+            filetypes=(("JSON de textos TextAsset", "*.json"), ("Todos os arquivos", "*.*")),
+        )
+        if not filenames:
+            return
+
+        output_dir = Path.cwd() / "output" / "catalogos"
+        results: list[tuple[Path, dict[str, Any]]] = []
+        errors: list[str] = []
+        for filename in filenames:
+            source = Path(filename)
+            destination = output_dir / f"{source.stem}.catalog.json"
+            try:
+                report = export_text_catalog(source, destination, target_language="pt-BR")
+                results.append((destination, report))
+            except (OSError, ValueError) as exc:
+                errors.append(f"{source.name}: {exc}")
+
+        lines = [
+            f"{path.name}: {report.get('created', 0) or report.get('new', 0)} novas, "
+            f"{report.get('preserved', 0)} preservadas, {report.get('changed', 0)} alteradas, "
+            f"{report.get('orphaned', 0)} órfãs"
+            for path, report in results
+        ]
+        if errors:
+            lines.extend(["", "Falhas:"] + errors)
+        messagebox.showinfo(
+            "Carga de JSON preparado",
+            f"Catálogos processados: {len(results)}\nFalhas: {len(errors)}\n"
+            f"Destino: {output_dir}\n\n" + "\n".join(lines),
+            parent=self.root,
+        )
+        if len(results) == 1 and not errors:
+            self.open_catalog(results[0][0])
 
     def choose_textasset_dumps(self) -> None:
         """Converte dumps TextAsset em JSONs validados numa pasta separada."""

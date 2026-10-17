@@ -1,10 +1,27 @@
+# Python
 .venv/
 __pycache__/
+*.py[cod]
+*.egg-info/
 .pytest_cache/
 .ruff_cache/
-*.py[cod]
+.coverage
+htmlcov/
+
+# Generated output and local working files
 output/
 work/
 *.backup
-# Metadados gerados durante a instala��o
-*.egg-info/
+*.bak
+
+# Editor and operating system
+.vscode/*.log
+.DS_Store
+Thumbs.db
+
+# Proprietary game files and extracted assets
+*.bundle
+*.assets
+*.resource
+*.exe
+*.dll

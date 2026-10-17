@@ -83,6 +83,18 @@ Esse esquema é inicial e não é o formato produzido por `text export`. A unifi
 
 `suikoden-tool text stats --input catalog.json` mostra total, estados `pending`, `translated`, `reviewed`, `needs_review`, `orphaned` e percentual concluído. Os comandos de validação e estatística não alteram o catálogo.
 
+## Tradução em lotes por CSV
+
+`text batch-export` exporta por padrão até 100 entradas nos estados `pending` e `needs_review` para CSV UTF-8 com BOM. O CSV inclui `id`, `id_type`, `original`, `translation` e `status`. `id_type` preserva a diferença entre IDs numéricos e IDs textuais, inclusive quando ambos têm a mesma representação visual.
+
+```powershell
+suikoden-tool text batch-export --input catalog.json --output lote_001.csv --limit 100
+suikoden-tool text batch-export --input catalog.json --output lote_002.csv --limit 100 --pending-only
+suikoden-tool text batch-import --catalog catalog.json --input lote_001.csv
+```
+
+Edite somente a coluna `translation`. A importação verifica todos os IDs, duplicatas e correspondência exata de `original` antes de gravar qualquer alteração. Se uma linha for inválida, o catálogo permanece inalterado. Traduções vazias são ignoradas e não apagam conteúdo existente. Uma entrada `needs_review` continua nesse estado após a importação; a revisão deve ser confirmada separadamente. Recomenda-se fazer backup do catálogo antes de importar cada lote.
+
 Estados reconhecidos: `pending`, `translated`, `reviewed`, `needs_review` e `orphaned`.
 
 ## Regras de preservação

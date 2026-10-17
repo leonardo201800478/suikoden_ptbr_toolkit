@@ -55,7 +55,9 @@ def _load_textasset_payload(script: str) -> Any:
         raise original_error
 
 
-def import_dump_to_catalog(\n    dump_path: Path, output_path: Path | None = None, *, overwrite: bool = False\n) -> dict[str, Any]:
+def import_dump_to_catalog(
+    dump_path: Path, output_path: Path | None = None, *, overwrite: bool = False
+) -> dict[str, Any]:
     """Lê um dump UnityDataTool/UABEA e cria um catálogo JSON editável.
 
     O dump fonte permanece intacto. Cada arquivo gera seu próprio catálogo, evitando

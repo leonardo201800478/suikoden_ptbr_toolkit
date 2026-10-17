@@ -43,6 +43,7 @@ class TranslationApp:
         self.current_id: tuple[type, object] | None = None
         self.dirty = False
         self._ai_busy = False
+        self._loading_entry = False
 
         self._configure_style()
         self._build_layout()
@@ -187,6 +188,7 @@ class TranslationApp:
             selectbackground="#484064",
         )
         self.translation_text.grid(row=5, column=0, sticky="nsew")
+        self.translation_text.bind("<<Modified>>", self._on_translation_modified)
         right.rowconfigure(5, weight=1)
 
         ttk.Label(right, text="CONTEXTO OPCIONAL PARA A SUGESTÃO DE IA", style="Panel.TLabel").grid(
@@ -321,6 +323,7 @@ class TranslationApp:
         self._display_entry(entry)
 
     def _display_entry(self, entry: dict[str, Any]) -> None:
+        self._loading_entry = True
         self.current_id = self._key(entry)
         self.dirty = False
         self.entry_meta.configure(
@@ -328,6 +331,8 @@ class TranslationApp:
         )
         self._set_text(self.original_text, entry.get("original", ""), readonly=True)
         self._set_text(self.translation_text, entry.get("translation", ""))
+        self.translation_text.edit_modified(False)
+        self._loading_entry = False
         self.context_entry.delete(0, "end")
         if entry.get("previous_original") is not None:
             self.message_var.set("Atenção: a fonte mudou. Compare com o texto anterior antes de revisar.")
@@ -339,8 +344,16 @@ class TranslationApp:
         widget.configure(state="normal")
         widget.delete("1.0", "end")
         widget.insert("1.0", value)
+        widget.edit_modified(False)
         if readonly:
             widget.configure(state="disabled")
+
+    def _on_translation_modified(self, _event: tk.Event | None = None) -> None:
+        if self.translation_text.edit_modified():
+            self.translation_text.edit_modified(False)
+            if not self._loading_entry and self.current_id is not None:
+                self.dirty = True
+                self.message_var.set("Alterações não salvas.")
 
     def _current_entry(self) -> dict[str, Any] | None:
         if self.current_id is None:
@@ -442,11 +455,13 @@ class TranslationApp:
         threading.Thread(target=worker, daemon=True).start()
 
     def _set_ai_buttons_state(self, state: str) -> None:
-        # O botão é encontrado por seu texto para manter o restante da interface simples.
-        for child in self.root.winfo_children():
-            for widget in child.winfo_children():
+        def visit(parent: tk.Misc) -> None:
+            for widget in parent.winfo_children():
                 if isinstance(widget, ttk.Button) and widget.cget("text") == "Sugerir com IA":
                     widget.configure(state=state)
+                visit(widget)
+
+        visit(self.root)
 
     def _ai_finished(self, suggestion: str | None = None, error: str | None = None) -> None:
         self._ai_busy = False

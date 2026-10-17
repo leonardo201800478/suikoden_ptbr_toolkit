@@ -200,7 +200,7 @@ def export_text_catalog(
 
 def _line_break_count(text: str) -> int:
     """Conta quebras CRLF, LF e CR como uma quebra lógica cada."""
-    return text.count("\\n") + text.count("\\r") - text.count("\\r\\n")
+    return text.count("\n") + text.count("\r") - text.count("\r\n")
 
 
 def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]:

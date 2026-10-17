@@ -74,7 +74,7 @@ Resultado observado pelo usuário:
 - Campos de saída: `id`, `original`, `translation`, `status`.
 - Valores iniciais de tradução vazios e status `pending`.
 
-**Limitação importante:** cada nova exportação substitui o arquivo de saída e cria traduções vazias. Não há merge/atualização segura implementado. Faça cópia de segurança antes de reexportar um catálogo editado.
+**Estado atual do toolkit:** `text export` implementa mesclagem segura: preserva tradução/status quando ID e original coincidem, marca texto de origem alterado como `needs_review` e mantém IDs removidos como `orphaned`. A extração automatizada via `text extract` é experimental e ainda precisa ser validada localmente com UnityDataTool 2.4.0 e bundles reais. Faça backup antes de alterações importantes.
 
 ## Hashes de outros bundles examinados
 

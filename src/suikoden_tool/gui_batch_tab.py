@@ -156,7 +156,8 @@ class TranslationBatchTab:
         )
         if not output_dir:
             return
-        destination = Path(output_dir) / f"{self.source_path.stem}_lotes"
+        # Separar lotes dos catálogos completos e usar o nome integral do arquivo de origem.
+        destination = Path(output_dir) / "lotes_traducao" / self.source_path.name
         if destination.exists() and any(destination.iterdir()):
             if not messagebox.askyesno(
                 "Pasta já contém arquivos",
@@ -169,6 +170,8 @@ class TranslationBatchTab:
 
         manifest: dict[str, Any] = {
             "source_file": self.source_path.name,
+            "source_path": str(self.source_path.resolve()),
+            "output_folder": str(destination),
             "source_entry_count": len(self.entries),
             "batch_size": batch_size,
             "id_type": "IDs originais; não renumerados",

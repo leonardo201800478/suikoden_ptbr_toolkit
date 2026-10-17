@@ -55,7 +55,7 @@ def _loads_textasset_json(script: str) -> Any:
                     if next_char and next_char not in ",}]:}":
                         # Aspas literais dentro de diálogos aparecem sem escape em
                         # alguns TextAssets. Não podem encerrar a string JSON.
-                        repaired.append('\\\\"')
+                        repaired.append('\\"')
                         changed = True
                     else:
                         repaired.append(char)

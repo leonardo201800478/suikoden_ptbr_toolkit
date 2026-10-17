@@ -224,3 +224,31 @@ def test_stats_counts_statuses_without_modifying_catalog():
 def test_stats_rejects_invalid_status():
     with pytest.raises(ValueError, match="status inválido"):
         catalog_stats({"entries": [{"id": 1, "status": "mystery"}]})
+
+
+def test_export_refuses_to_overwrite_source_file(tmp_path):
+    source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "Original"}])
+    before = source.read_bytes()
+
+    with pytest.raises(ValueError, match="não podem ser o mesmo arquivo"):
+        export_text_catalog(source, source)
+
+    assert source.read_bytes() == before
+
+
+def test_export_refuses_invalid_existing_catalog_without_modifying_it(tmp_path):
+    source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "Original"}])
+    output = tmp_path / "catalog.json"
+    original_bytes = json.dumps({
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
+        "target_language": "pt-BR",
+        "entries": [{"id": 1, "original": "Original", "translation": 123, "status": "translated"}],
+    }).encode()
+    output.write_bytes(original_bytes)
+
+    with pytest.raises(ValueError, match="Catálogo existente inválido"):
+        export_text_catalog(source, output)
+
+    assert output.read_bytes() == original_bytes

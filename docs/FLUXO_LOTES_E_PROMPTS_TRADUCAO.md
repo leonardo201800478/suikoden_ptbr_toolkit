@@ -131,7 +131,21 @@ Depois da tradução:
 6. Valide o JSON final e compare a estrutura antes de usar o arquivo em qualquer ferramenta de modificação.
 7. Não trate a geração de lotes como uma funcionalidade de mesclagem automática: a guia atual divide arquivos, mas não reúne automaticamente os lotes traduzidos nem atualiza seus estados.
 
-## 9. Checklist por lote
+## 9. Unificar os lotes traduzidos pela interface
+
+A guia **Lotes de tradução** inclui o botão **Unificar lotes traduzidos…**. Use-o depois de traduzir os arquivos:
+
+1. Clique no botão e selecione o **JSON original completo**, não um dos lotes.
+2. Selecione a pasta que contém diretamente os arquivos `lote_001.json`, `lote_002.json` etc. Os arquivos devem conter as traduções no campo `text`.
+3. A ferramenta confere os lotes pelo ID e bloqueia a operação se houver IDs ausentes, extras, duplicados, campos inválidos ou JSON malformado.
+4. Se a validação passar, escolha o nome e o destino do JSON completo traduzido.
+5. O resultado conserva a ordem e as propriedades do arquivo original e substitui somente o campo `text` correspondente a cada ID.
+
+O arquivo original e os lotes não são modificados. Recomenda-se salvar o resultado com um nome distinto, por exemplo `text_gsd1_en_ptbr.json`.
+
+**Atenção:** selecione apenas os lotes pertencentes ao mesmo arquivo original. Não coloque lotes de origens diferentes na mesma pasta. A ferramenta não usa apenas o número do lote para associar textos: a associação é feita pelo ID de cada entrada. Se a tradução de um lote estiver incompleta, a unificação é bloqueada para evitar produzir um catálogo parcial.
+
+## 10. Checklist por lote
 
 - [ ] O lote foi traduzido integralmente.
 - [ ] IDs e ordem conferidos com o original.

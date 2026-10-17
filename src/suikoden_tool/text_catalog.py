@@ -295,7 +295,7 @@ def catalog_stats(catalog: Any) -> dict[str, Any]:
     counts = {"pending": 0, "translated": 0, "reviewed": 0, "needs_review": 0, "orphaned": 0}
     for index, entry in enumerate(catalog["entries"]):
         if not isinstance(entry, dict):
-            raise ValueError(f"Entrada {index} do catálogo não é um objeto.")
+            raise ValueError(f"Entrada {index} do catálogo não é um objeto.")  # noqa: TRY004
         status = entry.get("status")
         if not isinstance(status, str) or status not in VALID_STATUSES:
             raise ValueError(f"Entrada {index} tem status inválido: {status!r}.")

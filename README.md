@@ -52,6 +52,18 @@ O carregamento não traduz nem reescreve os JSONs de origem. Os campos `text` s�
 sem substituir marcadores como `∠`, `∨`, `♂㈱`, `◎1` ou o caractere `?`.
 Os JSONs preparados não são arquivos para importar diretamente no UABEA; são fontes para o catálogo de edição.
 
+## Limite de caracteres nas caixas de diálogo
+
+A interface valida o texto digitado antes de salvar. **Cada linha exibida deve ter no máximo 66 caracteres**; se alguma linha ultrapassar o limite, o salvamento é interrompido e a ferramenta informa o número da linha e a contagem encontrada.
+
+Regras de contagem implementadas:
+- `∠` indica quebra de linha e `∨` indica mudança de caixa de diálogo; esses marcadores não entram na contagem.
+- Os marcadores de nome `♂㈱`, `♂①`, `♂②` e `♂⑩` reservam **10 caracteres cada**, pois serão substituídos dinamicamente pelo nome correspondente.
+- O padrão `/"texto"/` é contado como o conteúdo exibido, incluindo as aspas: `"texto"`.
+- Outros caracteres e marcadores são contados literalmente, um caractere Unicode por posição, até que seu comportamento no jogo seja confirmado.
+
+A contagem é uma proteção conservadora baseada nas regras conhecidas, não uma medição automática da largura visual da fonte. Novos tokens que tenham comportamento especial devem ser documentados e acrescentados explicitamente ao contador. A validação não altera o texto original; ela apenas impede salvar uma tradução que exceda o limite calculado.
+
 ## Fluxo fiel de TextAsset com UABEA
 
 O fluxo de referência para testar exportação/importação é o UABEA:

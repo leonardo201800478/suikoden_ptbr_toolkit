@@ -285,9 +285,11 @@ class TranslationApp:
             snippet = " ".join(original.split())
             if len(snippet) > 95:
                 snippet = snippet[:92] + "..."
+            status = entry.get("status")
+            status_label = labels.get(status, status) if isinstance(status, str) else "?"
             self.tree.insert(
                 "", "end", iid=iid,
-                values=(labels.get(entry.get("status"), entry.get("status", "?")), snippet),
+                values=(status_label, snippet),
             )
         if selected_key:
             for entry in self.visible_entries:

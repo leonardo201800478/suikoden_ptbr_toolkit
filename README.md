@@ -37,6 +37,21 @@ Links: https://github.com/AssetRipper/AssetRipper · https://github.com/nesrak1/
 
 Os arquivos fornecidos apresentam assinatura `UnityFS` e estão em `StreamingAssets/aa/StandaloneWindows64`, estrutura típica de Unity Addressables. Isso identifica o contêiner, não ainda o recurso que contém cada texto.
 
+## Carregar arquivos JSON já preparados para tradução
+
+Na interface gráfica, use **Carregar JSON preparado** e selecione um ou mais arquivos `.json` que contenham
+`textList` com objetos `id` e `text`. Exemplos de nomes incluem
+`text_gsd1_en-....json`, `text_gsd2_en-....json` e `text_add_en-....json`.
+
+O editor cria catálogos independentes em `output/catalogos/<nome>.catalog.json`. Se o catálogo já existir,
+as traduções existentes são mescladas por ID: traduções não são descartadas, textos de origem alterados
+ficam marcados para revisão e IDs que desapareceram são mantidos como órfãos. Se for selecionado apenas um
+arquivo e a carga terminar sem erros, o catálogo resultante é aberto automaticamente.
+
+O carregamento não traduz nem reescreve os JSONs de origem. Os campos `text` são copiados para `original`
+sem substituir marcadores como `∠`, `∨`, `♂㈱`, `◎1` ou o caractere `?`.
+Os JSONs preparados não são arquivos para importar diretamente no UABEA; são fontes para o catálogo de edição.
+
 ## Fluxo fiel de TextAsset com UABEA
 
 O fluxo de referência para testar exportação/importação é o UABEA:

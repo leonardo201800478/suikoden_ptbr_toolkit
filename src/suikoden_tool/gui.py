@@ -9,6 +9,12 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
+from suikoden_tool.app_settings import (
+    find_game_assets_directory,
+    load_settings,
+    save_settings,
+    validate_game_directory,
+)
 from suikoden_tool.gui_service import (
     get_catalog_stats,
     load_catalog,
@@ -43,10 +49,14 @@ class TranslationApp:
         self._ai_busy = False
         self._ai_entry_id: tuple[type, object] | None = None
         self._loading_entry = False
+        self.settings = load_settings()
+        self.game_directory = self.settings.get("game_directory", "")
 
         self._configure_style()
         self._build_layout()
         self._bind_events()
+        self.game_directory_var.set(self.game_directory)
+        self._refresh_game_directory_status()
         if catalog_path:
             self.open_catalog(catalog_path)
 
@@ -105,6 +115,25 @@ class TranslationApp:
         ttk.Button(header, text="Abrir catálogo", command=self.choose_catalog).pack(side="right")
         self.file_label = ttk.Label(header, text="Nenhum catálogo aberto", style="Muted.TLabel")
         self.file_label.pack(side="right", padx=14)
+
+        game_path_frame = ttk.Frame(self.root, padding=(18, 0, 18, 8))
+        game_path_frame.pack(fill="x")
+        ttk.Label(game_path_frame, text="PASTA DO JOGO", style="Muted.TLabel").pack(side="left")
+        self.game_directory_var = tk.StringVar()
+        self.game_directory_entry = ttk.Entry(
+            game_path_frame, textvariable=self.game_directory_var
+        )
+        self.game_directory_entry.pack(side="left", fill="x", expand=True, padx=(10, 8))
+        ttk.Button(
+            game_path_frame, text="Selecionar pasta…", command=self.choose_game_directory
+        ).pack(side="left")
+        ttk.Button(
+            game_path_frame, text="Aplicar", command=self.apply_game_directory
+        ).pack(side="left", padx=(7, 0))
+        self.game_directory_status = ttk.Label(
+            self.root, text="", style="Muted.TLabel", padding=(18, 0, 18, 8)
+        )
+        self.game_directory_status.pack(fill="x")
 
         self.stats_label = ttk.Label(
             self.root,
@@ -224,6 +253,51 @@ class TranslationApp:
         self.status_var.trace_add("write", lambda *_: self.refresh_list())
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
+
+    def choose_game_directory(self) -> None:
+        """Permite selecionar a pasta de instalação do jogo."""
+        selected = filedialog.askdirectory(
+            title="Selecione a pasta que contém o executável de Suikoden I & II HD Remaster",
+            initialdir=self.game_directory or None,
+            mustexist=True,
+        )
+        if selected:
+            self.game_directory_var.set(selected)
+            self.apply_game_directory()
+
+    def apply_game_directory(self) -> None:
+        """Valida e persiste a pasta do jogo como caminho absoluto."""
+        try:
+            directory = validate_game_directory(self.game_directory_var.get())
+            save_settings({"game_directory": str(directory)})
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Pasta do jogo inválida", str(exc), parent=self.root)
+            return
+        self.game_directory = str(directory)
+        self.settings["game_directory"] = self.game_directory
+        self.game_directory_var.set(self.game_directory)
+        self._refresh_game_directory_status()
+        self.message_var.set("Pasta do jogo salva nas configurações da ferramenta.")
+
+    def _refresh_game_directory_status(self) -> None:
+        """Mostra se a pasta e os recursos Addressables ainda estão disponíveis."""
+        if not self.game_directory:
+            self.game_directory_status.configure(
+                text="Pasta não configurada. O catálogo continua podendo ser editado sem ela."
+            )
+            return
+        directory = Path(self.game_directory).expanduser()
+        if not directory.is_dir():
+            self.game_directory_status.configure(
+                text="Pasta salva, mas não encontrada. Selecione novamente a instalação do jogo."
+            )
+            return
+        assets_directory = find_game_assets_directory(directory)
+        if assets_directory.is_dir():
+            detail = f"Recursos do jogo detectados: {assets_directory}"
+        else:
+            detail = "Pasta válida; diretório Addressables StandaloneWindows64 não detectado ainda."
+        self.game_directory_status.configure(text=detail)
 
     def choose_catalog(self) -> None:
         filename = filedialog.askopenfilename(

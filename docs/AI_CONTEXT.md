@@ -25,6 +25,8 @@ Construir em Python uma ferramenta prática, eficiente e segura para investigar,
 - `text export`: cria ou mescla um catálogo de JSON já extraído com `textList`; preserva traduções compatíveis, marca mudanças de origem para revisão e preserva IDs removidos como `orphaned`.
 - `text validate`: verifica estrutura, IDs duplicados, campos, status e traduções pendentes; com `--source`, compara IDs e textos contra uma extração atual.
 - `text stats`: conta entradas por status e percentual concluído sem alterar o catálogo.
+- `text batch-export`: exporta entradas `pending` e, por padrão, `needs_review` para CSV UTF-8 com BOM, compatível com Excel; limite padrão de 100.
+- `text batch-import`: importa traduções CSV após validar IDs, tipos de ID e igualdade exata do texto original. Faz todas as validações antes de gravar; células vazias não apagam traduções e entradas `needs_review` continuam exigindo revisão.
 
 Exemplo de entrada para `text export`:
 
@@ -75,7 +77,7 @@ Comandos para validar a versão atual:
 - `ruff check .`
 - `suikoden-tool text export --help`
 - `suikoden-tool text validate --help`
-- `suikoden-tool text stats --help`
+- `suikoden-tool text stats --help`\n- `suikoden-tool text batch-export --help`\n- `suikoden-tool text batch-import --help`
 
 A branch ainda é de desenvolvimento e não deve ser confundida com `main`.
 

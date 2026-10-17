@@ -17,6 +17,7 @@ from suikoden_tool.app_settings import (
     validate_game_directory,
 )
 from suikoden_tool.gui_resource_tab import ResourceCatalogTab
+from suikoden_tool.gui_batch_tab import TranslationBatchTab
 from suikoden_tool.gui_service import (
     get_catalog_stats,
     load_catalog,
@@ -72,10 +73,13 @@ class TranslationApp:
         self.notebook.pack(fill="both", expand=True)
         self.editor_tab = ttk.Frame(self.notebook)
         self.extraction_tab = ttk.Frame(self.notebook)
+        self.batch_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.editor_tab, text="Editor atual")
         self.notebook.add(self.extraction_tab, text="Extração dos 4 bundles")
+        self.notebook.add(self.batch_tab, text="Lotes de tradução")
         self._build_layout()
         self._build_extraction_tab()
+        TranslationBatchTab(self.batch_tab)
         self._bind_events()
         self.game_directory_var.set(self.game_directory)
         self._refresh_game_directory_status()

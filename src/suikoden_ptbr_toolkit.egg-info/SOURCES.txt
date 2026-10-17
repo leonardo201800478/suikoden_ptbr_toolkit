@@ -28,4 +28,5 @@ tests/test_text_batch.py
 tests/test_text_discovery.py
 tests/test_text_export.py
 tests/test_text_extractor.py
+tests/test_text_extractor_dump.py
 tests/test_unity_text_extractor.py

@@ -1,0 +1,39 @@
+name: Relato de bug
+description: Relate um defeito reproduzível no toolkit.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Não anexe bundles, executáveis, dumps integrais ou outros arquivos proprietários do jogo. Remova caminhos pessoais e dados sensíveis dos logs."
+  - type: textarea
+    id: summary
+    attributes:
+      label: Descrição
+      description: O que aconteceu e o que você esperava?
+      placeholder: Descreva o comportamento observado.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Passos para reproduzir
+      description: Inclua comandos e um exemplo mínimo sintético, se possível.
+      placeholder: "1. Execute ...\n2. Observe ..."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versão do toolkit / commit
+      placeholder: "commit SHA ou versão"
+  - type: input
+    id: python
+    attributes:
+      label: Versão do Python
+      placeholder: "Ex.: 3.12.7"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs relevantes
+      description: Remova informações pessoais e caminhos sensíveis.

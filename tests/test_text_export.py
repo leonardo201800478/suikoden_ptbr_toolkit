@@ -32,7 +32,10 @@ def test_export_creates_catalog_and_preserves_original_text(tmp_path):
     assert catalog["resource"] == "text_add_en"
     assert catalog["target_language"] == "pt-BR"
     assert catalog["entries"][0] == {
-        "id": 1, "original": "Power?", "translation": "", "status": "pending"
+        "id": 1,
+        "original": "Power?",
+        "translation": "",
+        "status": "pending",
     }
     assert catalog["entries"][1]["original"] == "Linha 1∠Linha 2\ncontinuação"
     assert catalog["entries"][2]["original"] == ""
@@ -80,10 +83,14 @@ def test_update_keeps_translation_and_marks_changed_source_for_review(tmp_path):
         "resource": "resource",
         "source_language": "en",
         "target_language": "pt-BR",
-        "entries": [{
-            "id": 1, "original": "Old source", "translation": "Tradução existente",
-            "status": "translated",
-        }],
+        "entries": [
+            {
+                "id": 1,
+                "original": "Old source",
+                "translation": "Tradução existente",
+                "status": "translated",
+            }
+        ],
     }
     output.write_text(json.dumps(catalog, ensure_ascii=False), encoding="utf-8")
 
@@ -102,7 +109,9 @@ def test_update_preserves_removed_entries_as_orphaned(tmp_path):
     source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "Keep"}])
     output = tmp_path / "catalog.json"
     catalog = {
-        "schema_version": 1, "resource": "resource", "source_language": "en",
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
         "target_language": "pt-BR",
         "entries": [
             {"id": 1, "original": "Keep", "translation": "Manter", "status": "translated"},
@@ -120,10 +129,14 @@ def test_update_preserves_removed_entries_as_orphaned(tmp_path):
 
 
 def test_update_adds_new_ids_without_resetting_existing_translation(tmp_path):
-    source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "A"}, {"id": 2, "text": "B"}])
+    source = write_source(
+        tmp_path / "resource.json", [{"id": 1, "text": "A"}, {"id": 2, "text": "B"}]
+    )
     output = tmp_path / "catalog.json"
     catalog = {
-        "schema_version": 1, "resource": "resource", "source_language": "en",
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
         "target_language": "pt-BR",
         "entries": [{"id": 1, "original": "A", "translation": "AA", "status": "translated"}],
     }
@@ -141,10 +154,15 @@ def test_update_adds_new_ids_without_resetting_existing_translation(tmp_path):
 def test_update_refuses_different_target_language_without_modifying_file(tmp_path):
     source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "A"}])
     output = tmp_path / "catalog.json"
-    original_bytes = json.dumps({
-        "schema_version": 1, "resource": "resource", "source_language": "en",
-        "target_language": "en", "entries": [],
-    }).encode()
+    original_bytes = json.dumps(
+        {
+            "schema_version": 1,
+            "resource": "resource",
+            "source_language": "en",
+            "target_language": "en",
+            "entries": [],
+        }
+    ).encode()
     output.write_bytes(original_bytes)
 
     with pytest.raises(ValueError, match="Não foi alterado"):
@@ -154,7 +172,9 @@ def test_update_refuses_different_target_language_without_modifying_file(tmp_pat
 
 def test_validate_reports_duplicate_ids_invalid_fields_and_pending_translations():
     catalog = {
-        "schema_version": 1, "resource": "resource", "source_language": "en",
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
         "target_language": "pt-BR",
         "entries": [
             {"id": 1, "original": "A", "translation": "", "status": "pending"},
@@ -177,7 +197,9 @@ def test_validate_detects_source_changes_and_new_or_removed_ids(tmp_path):
         [{"id": 1, "text": "Changed"}, {"id": 3, "text": "New"}],
     )
     catalog = {
-        "schema_version": 1, "resource": "resource", "source_language": "en",
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
         "target_language": "pt-BR",
         "entries": [
             {"id": 1, "original": "Old", "translation": "Antigo", "status": "translated"},
@@ -202,7 +224,9 @@ def test_validate_rejects_non_object_catalog():
 
 def test_stats_counts_statuses_without_modifying_catalog():
     catalog = {
-        "schema_version": 1, "resource": "resource", "source_language": "en",
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
         "target_language": "pt-BR",
         "entries": [
             {"id": 1, "original": "A", "translation": "", "status": "pending"},
@@ -216,8 +240,13 @@ def test_stats_counts_statuses_without_modifying_catalog():
     stats = catalog_stats(catalog)
 
     assert stats == {
-        "total": 5, "pending": 1, "translated": 1, "reviewed": 1,
-        "needs_review": 1, "orphaned": 1, "completion_percent": 40.0,
+        "total": 5,
+        "pending": 1,
+        "translated": 1,
+        "reviewed": 1,
+        "needs_review": 1,
+        "orphaned": 1,
+        "completion_percent": 40.0,
     }
 
 
@@ -239,13 +268,17 @@ def test_export_refuses_to_overwrite_source_file(tmp_path):
 def test_export_refuses_invalid_existing_catalog_without_modifying_it(tmp_path):
     source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "Original"}])
     output = tmp_path / "catalog.json"
-    original_bytes = json.dumps({
-        "schema_version": 1,
-        "resource": "resource",
-        "source_language": "en",
-        "target_language": "pt-BR",
-        "entries": [{"id": 1, "original": "Original", "translation": 123, "status": "translated"}],
-    }).encode()
+    original_bytes = json.dumps(
+        {
+            "schema_version": 1,
+            "resource": "resource",
+            "source_language": "en",
+            "target_language": "pt-BR",
+            "entries": [
+                {"id": 1, "original": "Original", "translation": 123, "status": "translated"}
+            ],
+        }
+    ).encode()
     output.write_bytes(original_bytes)
 
     with pytest.raises(ValueError, match="Catálogo existente inválido"):

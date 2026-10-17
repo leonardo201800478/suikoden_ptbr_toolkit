@@ -101,8 +101,7 @@ def export_text_catalog(
             "source_language": "en",
             "target_language": target_language,
             "entries": [
-                {**entry, "translation": "", "status": "pending"}
-                for entry in source_entries
+                {**entry, "translation": "", "status": "pending"} for entry in source_entries
             ],
         }
         _write_json(catalog, output)
@@ -117,7 +116,9 @@ def export_text_catalog(
 
     existing = _read_json(output)
     if not isinstance(existing, dict) or existing.get("schema_version") != SCHEMA_VERSION:
-        raise ValueError("O arquivo de saída existe, mas não é um catálogo compatível (schema_version 1).")
+        raise ValueError(
+            "O arquivo de saída existe, mas não é um catálogo compatível (schema_version 1)."
+        )
     if existing.get("target_language") != target_language:
         raise ValueError(
             f"O catálogo existente usa {existing.get('target_language')!r}; "
@@ -132,8 +133,7 @@ def export_text_catalog(
     existing_report = validate_catalog(existing)
     if existing_report["errors"]:
         raise ValueError(
-            "Catálogo existente inválido; não foi alterado: "
-            + "; ".join(existing_report["errors"])
+            "Catálogo existente inválido; não foi alterado: " + "; ".join(existing_report["errors"])
         )
     old_by_id = _catalog_index(existing)
     merged: list[dict[str, Any]] = []
@@ -161,8 +161,10 @@ def export_text_catalog(
         else:
             merged_entry["original"] = fresh["original"]
             if merged_entry.get("status") == "orphaned":
-                merged_entry["status"] = "needs_review" if merged_entry.get("source_changed") else (
-                    "translated" if merged_entry.get("translation") else "pending"
+                merged_entry["status"] = (
+                    "needs_review"
+                    if merged_entry.get("source_changed")
+                    else ("translated" if merged_entry.get("translation") else "pending")
                 )
             preserved += 1
         merged.append(merged_entry)
@@ -176,13 +178,15 @@ def export_text_catalog(
             orphaned += 1
 
     result = dict(existing)
-    result.update({
-        "schema_version": SCHEMA_VERSION,
-        "resource": resource,
-        "source_language": existing.get("source_language", "en"),
-        "target_language": target_language,
-        "entries": merged,
-    })
+    result.update(
+        {
+            "schema_version": SCHEMA_VERSION,
+            "resource": resource,
+            "source_language": existing.get("source_language", "en"),
+            "target_language": target_language,
+            "entries": merged,
+        }
+    )
     _write_json(result, output)
     return {
         "catalog": result,
@@ -199,7 +203,11 @@ def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]
     errors: list[str] = []
     warnings: list[str] = []
     if not isinstance(catalog, dict):
-        return {"valid": False, "errors": ["A raiz do catálogo precisa ser um objeto."], "warnings": []}
+        return {
+            "valid": False,
+            "errors": ["A raiz do catálogo precisa ser um objeto."],
+            "warnings": [],
+        }
 
     if catalog.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"schema_version precisa ser {SCHEMA_VERSION}.")
@@ -245,7 +253,9 @@ def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]
         if entry.get("source_changed") is True:
             warnings.append(f"Entrada {entry_id!r}: texto de origem mudou; revisar tradução.")
         if status == "pending" and isinstance(translation, str) and translation.strip():
-            warnings.append(f"Entrada {entry_id!r}: tradução preenchida, mas status ainda é pending.")
+            warnings.append(
+                f"Entrada {entry_id!r}: tradução preenchida, mas status ainda é pending."
+            )
         if status == "translated" and isinstance(translation, str) and not translation.strip():
             errors.append(f"Entrada {entry_id!r}: status translated exige tradução não vazia.")
         if status == "reviewed" and isinstance(translation, str) and not translation.strip():
@@ -293,6 +303,13 @@ def catalog_stats(catalog: Any) -> dict[str, Any]:
             raise ValueError(f"Entrada {index} tem status inválido: {status!r}.")
         counts[status] += 1
     total = len(catalog["entries"])
-    return {"total": total, **counts, "completion_percent": round(
-        100 * (total - counts["pending"] - counts["needs_review"] - counts["orphaned"]) / total, 1
-    ) if total else 0.0}
+    return {
+        "total": total,
+        **counts,
+        "completion_percent": round(
+            100 * (total - counts["pending"] - counts["needs_review"] - counts["orphaned"]) / total,
+            1,
+        )
+        if total
+        else 0.0,
+    }

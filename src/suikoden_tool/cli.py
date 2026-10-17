@@ -1,4 +1,5 @@
 """Interface de linha de comando para o toolkit."""
+
 import argparse
 import json
 from pathlib import Path

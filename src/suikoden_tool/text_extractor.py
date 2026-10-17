@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from suikoden_tool.unity_text_extractor import _dump_textasset_fields
+
 DEFAULT_BUNDLE_NAMES = (
     "03cf0288ba3ecaca0776d7fadf1f0bb6.bundle",
     "0573e2f60d0cda7892d60f38dfd7282c.bundle",
@@ -158,14 +160,35 @@ def extract_from_bundles(
                     diagnostics.append({"bundle": bundle_name, "asset_path": asset_path, "object_path_id": object_id,
                                         "error": (dumped.stderr or dumped.stdout).strip()[:1200]})
                     continue
-                raw = dumped.stdout.lstrip("\ufeff").strip()
+                # UnityDataTool dump inclui cabeçalho e campos serializados antes de m_Script.
+                # Interpretar stdout inteiro como JSON faz a extração ignorar todos os TextAssets.
                 try:
-                    payload = json.loads(raw)
-                except json.JSONDecodeError:
-                    diagnostics.append({"bundle": bundle_name, "asset_path": asset_path, "object_path_id": object_id,
-                                        "warning": "TextAsset não é JSON válido; preservado apenas no diagnóstico."})
+                    asset_name, script = _dump_textasset_fields(dumped.stdout.lstrip("\ufeff"))
+                except ValueError as exc:
+                    diagnostics.append({
+                        "bundle": bundle_name,
+                        "asset_path": asset_path,
+                        "object_path_id": object_id,
+                        "warning": f"Não foi possível localizar m_Script: {exc}",
+                    })
                     continue
-                pairs = extract_id_text_pairs(payload)
+
+                try:
+                    payload = json.loads(script)
+                    pairs = extract_id_text_pairs(payload)
+                except json.JSONDecodeError as exc:
+                    # Alguns dumps podem conter JSON parcial/serialização com escapes inválidos.
+                    # Mantemos diagnóstico detalhado em vez de descartar silenciosamente o objeto.
+                    diagnostics.append({
+                        "bundle": bundle_name,
+                        "asset_path": asset_path,
+                        "object_path_id": object_id,
+                        "asset_name": asset_name,
+                        "warning": "m_Script não contém JSON válido.",
+                        "json_error": str(exc),
+                        "script_preview": script[:1000],
+                    })
+                    continue
                 for text_id, text in pairs:
                     entry = ExtractedText(
                         game="unknown", bundle=bundle_name, asset_path=asset_path,

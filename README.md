@@ -1,17 +1,33 @@
 # Suikoden I & II HD Remaster — Toolkit PT-BR
 
-Projeto inicial em Python para analisar recursos da versão Windows e desenvolver o fluxo de localização.
+Ferramentas em Python para investigar os recursos da versão Windows de **Suikoden I & II HD Remaster** e construir um fluxo de localização para português brasileiro (PT-BR).
 
-## Estado atual
-- Inspeção não destrutiva de cabeçalho UnityFS e SHA-256.
-- Inventário recursivo de `.bundle` em JSON.
-- Esquema JSON com campos para texto, tokens, ponteiros e limites.
-- Teste unitário do cabeçalho.
+> **Estado do projeto: fase inicial de engenharia reversa.** O toolkit atualmente inspeciona metadados básicos de bundles UnityFS, gera inventários e define um esquema inicial para entradas de tradução. Ainda **não extrai textos do jogo nem reconstrói/modifica bundles**.
 
-**Ainda não extrai textos nem reconstrói bundles.** Precisamos identificar os tipos de assets e a estrutura dos objetos serializados. Limites e ponteiros serão preenchidos com evidências reais, não estimativas.
+- **Idioma da documentação:** português brasileiro.
+- **Plataforma-alvo inicial:** Windows.
+- **Tecnologia:** Python, CLI, JSON e testes automatizados.
+- **Prioridade:** preservar os dados técnicos originais e validar cada hipótese com arquivos reais.
 
-## Configuração Windows / VS Code
-Recomendação inicial: Python 3.12 ou 3.13.
+## Funcionalidades atuais
+
+- Inspeção não destrutiva do cabeçalho de arquivos `.bundle` com assinatura UnityFS.
+- Cálculo de SHA-256 para identificar e comparar arquivos.
+- Inventário recursivo de bundles, exportável em JSON.
+- Geração de modelo JSON para organizar futuras traduções.
+- Esquema inicial com campos para jogo, asset, IDs, texto original, tradução, tokens de controle, limites e estado de revisão.
+- Testes automatizados para a inspeção de cabeçalho.
+
+## Requisitos
+
+- Windows 10/11 (ambiente inicial de desenvolvimento).
+- Python **3.11 ou superior**; recomenda-se Python 3.12 ou 3.13.
+- Git e Visual Studio Code são recomendados.
+
+## Instalação em ambiente de desenvolvimento
+
+No PowerShell, na pasta clonada do repositório:
+
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -19,31 +35,85 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-## Comandos
+Se o Python 3.12 não estiver instalado, substitua `-3.12` por uma versão disponível que seja 3.11 ou superior.
+
+## Uso
+
+### Inspecionar um bundle
+
 ```powershell
 suikoden-tool inspect "C:\caminho\arquivo.bundle"
+```
+
+Para salvar o resultado em JSON:
+
+```powershell
+suikoden-tool inspect "C:\caminho\arquivo.bundle" -o output\bundle_info.json
+```
+
+### Inventariar bundles de uma pasta
+
+Aponte para a pasta que contém os bundles do jogo:
+
+```powershell
 suikoden-tool inventory "C:\caminho\StandaloneWindows64" -o output\bundle_inventory.json
+```
+
+### Criar um modelo de tradução
+
+```powershell
 suikoden-tool template --game suikoden_i -o data\translations_template.json
+suikoden-tool template --game suikoden_ii -o output\suikoden_ii_template.json
+```
+
+### Executar testes e verificações
+
+```powershell
 pytest
 ruff check .
 ```
 
-## Ferramentas para avaliar
-- **AssetRipper** para extração em lote e análise de assets Unity suportados.
-- **UABEA** para inspeção/edição direcionada de assets e bundles.
-- **UnityDataTools** para dump e análise de conteúdo serializado.
+O Ruff é usado para análise estática; enquanto o estilo do código estiver sendo padronizado, eventuais avisos devem ser corrigidos antes de tornar a verificação obrigatória no CI.
 
-Links: https://github.com/AssetRipper/AssetRipper · https://github.com/nesrak1/UABEA · https://github.com/Unity-Technologies/UnityDataTools
+## Ferramentas externas em avaliação
 
-Os arquivos fornecidos apresentam assinatura `UnityFS` e estão em `StreamingAssets/aa/StandaloneWindows64`, estrutura típica de Unity Addressables. Isso identifica o contêiner, não ainda o recurso que contém cada texto.
+Estas ferramentas são candidatas para inspecionar assets Unity. Nenhuma delas é ainda uma dependência obrigatória do toolkit:
 
-## Próximas etapas
-1. Inventariar os bundles originais do jogo e registrar hashes.
-2. Identificar `MonoBehaviour`, `TextAsset`, tabelas e fontes via ferramentas externas.
-3. Mapear formato de strings, IDs, tokens e referências.
-4. Implementar extração/importação JSON preservando dados técnicos.
-5. Criar validador de tokens, comprimento e quebra de linha.
-6. Criar editor visual de diálogos e menus.
-7. Implementar reconstrução/patch e testes no jogo.
+- [AssetRipper](https://github.com/AssetRipper/AssetRipper) — extração e análise de assets Unity suportados.
+- [UABEA](https://github.com/nesrak1/UABEA) — inspeção e edição direcionada de assets Unity.
+- [UnityDataTools](https://github.com/Unity-Technologies/UnityDataTools) — ferramentas de análise de dados Unity.
 
-Trabalhe em cópias e mantenha os arquivos originais preservados.
+O cabeçalho `UnityFS` identifica o contêiner, mas **não revela por si só qual objeto contém o texto**, nem garante que um bundle possa ser reconstruído sem perda. A compatibilidade precisa ser testada com a versão real dos arquivos.
+
+## Plano de desenvolvimento
+
+1. **Inventário reproduzível:** registrar caminhos relativos, tamanhos, hashes e metadados dos bundles originais.
+2. **Descoberta de assets:** identificar tipos de objetos, tabelas de texto, fontes, IDs e referências.
+3. **Extração controlada:** exportar texto sem perder tokens, IDs, ordenação ou metadados necessários.
+4. **Formato de tradução:** definir um JSON versionado e documentar campos obrigatórios e opcionais.
+5. **Validação:** verificar tokens, variáveis dinâmicas, quebras de linha e limites confirmados por testes.
+6. **Editor:** criar uma interface para pesquisar, traduzir, filtrar e revisar diálogos e menus.
+7. **Importação/reconstrução:** implementar apenas após identificar o formato e comprovar a preservação dos dados.
+8. **Testes no jogo:** validar cópias de trabalho e manter os originais intactos.
+
+Mais detalhes: [arquitetura e etapas](docs/ARCHITECTURE.md) e [formato de tradução](docs/TRANSLATION_FORMAT.md).
+
+## Princípios de segurança e qualidade
+
+- Nunca sobrescrever os bundles originais; trabalhar com cópias.
+- Não inventar limites de caracteres, IDs ou tokens: registrar a origem de cada regra.
+- Preservar tokens de controle, variáveis, ponteiros e quebras de linha até que seu significado seja confirmado.
+- Usar hashes para documentar os arquivos testados.
+- Manter testes para parsers, exportação, validação e reconstrução.
+- Não incluir no repositório bundles, executáveis, dumps integrais ou outros arquivos proprietários do jogo.
+- Não tratar o projeto como afiliado ou endossado pela Konami.
+
+## Como contribuir
+
+Consulte [CONTRIBUTING.md](CONTRIBUTING.md). Relatos de falhas e propostas podem ser enviados pela aba Issues do GitHub.
+
+## Licença e direitos sobre o jogo
+
+O **código-fonte original deste toolkit** é distribuído sob a licença MIT, conforme o arquivo [LICENSE](LICENSE). Essa licença não concede direitos sobre Suikoden, seus personagens, marcas, textos originais, imagens, áudio ou arquivos do jogo. Esses materiais pertencem aos respectivos titulares e não devem ser enviados a este repositório.
+
+O projeto é uma iniciativa independente, sem afiliação ou endosso oficial. Veja também [SECURITY.md](SECURITY.md).

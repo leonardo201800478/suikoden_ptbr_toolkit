@@ -24,9 +24,13 @@ def import_dump_to_catalog(dump_path: Path, output_path: Path | None = None) -> 
     try:
         payload = _loads_textasset_json(script)
     except json.JSONDecodeError as exc:
+        start = max(0, exc.pos - 100)
+        end = min(len(script), exc.pos + 100)
+        context = script[start:end].replace("\\r", "\\\\r").replace("\\n", "\\\\n").replace("\\t", "\\\\t")
         raise ValueError(
             f"{dump_path.name}: o m_Script do TextAsset {asset_name!r} não é JSON válido "
-            f"(linha {exc.lineno}, coluna {exc.colno}). O dump original foi preservado."
+            f"(linha {exc.lineno}, coluna {exc.colno}; {exc.msg}). "
+            f"Trecho próximo ao erro: {context!r}. O dump original foi preservado."
         ) from exc
     if not isinstance(payload, dict) or not isinstance(payload.get("textList"), list):
         raise ValueError(

@@ -129,6 +129,12 @@ def export_text_catalog(
             f"mas a fonte é {resource!r}. Não foi alterado."
         )
 
+    existing_report = validate_catalog(existing)
+    if existing_report["errors"]:
+        raise ValueError(
+            "Catálogo existente inválido; não foi alterado: "
+            + "; ".join(existing_report["errors"])
+        )
     old_by_id = _catalog_index(existing)
     merged: list[dict[str, Any]] = []
     current_ids: set[tuple[type, object]] = set()
@@ -228,7 +234,7 @@ def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]
         if not isinstance(entry.get("translation"), str):
             errors.append(f"Entrada {entry_id!r}: 'translation' precisa ser string.")
         status = entry.get("status")
-        if status not in VALID_STATUSES:
+        if not isinstance(status, str) or status not in VALID_STATUSES:
             errors.append(f"Entrada {entry_id!r}: status inválido {status!r}.")
         translation = entry.get("translation")
         if isinstance(translation, str) and not translation.strip():
@@ -278,7 +284,7 @@ def catalog_stats(catalog: Any) -> dict[str, Any]:
         if not isinstance(entry, dict):
             raise ValueError(f"Entrada {index} do catálogo não é um objeto.")
         status = entry.get("status")
-        if status not in VALID_STATUSES:
+        if not isinstance(status, str) or status not in VALID_STATUSES:
             raise ValueError(f"Entrada {index} tem status inválido: {status!r}.")
         if status == "pending" and isinstance(entry.get("translation"), str) and entry["translation"].strip():
             counts["translated"] += 1

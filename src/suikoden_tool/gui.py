@@ -397,7 +397,7 @@ class TranslationApp:
         ).start()
 
     def _extraction_worker(self, bundles: tuple[Path, ...], executable: Path) -> None:
-        output_dir = Path("work/bundle_analysis").resolve()
+        output_dir = Path(__file__).resolve().parents[2] / "work" / "bundle_analysis"
         results: list[tuple[Path, Path, str, int]] = []
         errors: list[str] = []
         for index, bundle in enumerate(bundles, start=1):

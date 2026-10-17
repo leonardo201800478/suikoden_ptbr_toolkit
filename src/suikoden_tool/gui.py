@@ -22,8 +22,6 @@ PANEL_ALT = "#282c36"
 FG = "#e8eaf0"
 MUTED = "#a0a6b5"
 ACCENT = "#8b7cff"
-GREEN = "#66d9a8"
-ORANGE = "#f0b568"
 
 
 class TranslationApp:
@@ -43,6 +41,7 @@ class TranslationApp:
         self.current_id: tuple[type, object] | None = None
         self.dirty = False
         self._ai_busy = False
+        self._ai_entry_id: tuple[type, object] | None = None
         self._loading_entry = False
 
         self._configure_style()
@@ -99,7 +98,7 @@ class TranslationApp:
     def _build_layout(self) -> None:
         header = ttk.Frame(self.root, padding=(18, 14, 18, 10))
         header.pack(fill="x")
-        ttk.Label(header, text="SUikoden  I  /  II", style="Header.TLabel").pack(side="left")
+        ttk.Label(header, text="SUIKODEN  I  /  II", style="Header.TLabel").pack(side="left")
         ttk.Label(header, text="EDITOR DE LOCALIZAÇÃO  ·  PT-BR", style="Muted.TLabel").pack(
             side="left", padx=(16, 0), pady=(5, 0)
         )
@@ -440,6 +439,7 @@ class TranslationApp:
             return
         original = entry.get("original", "")
         context = self.context_entry.get()
+        self._ai_entry_id = self.current_id
         self._ai_busy = True
         self.message_var.set("Solicitando sugestão de tradução…")
         self._set_ai_buttons_state("disabled")
@@ -471,6 +471,9 @@ class TranslationApp:
             messagebox.showerror("Assistência de IA", error, parent=self.root)
             return
         if suggestion is not None:
+            if self.current_id != self._ai_entry_id:
+                self.message_var.set("Sugestão recebida para outra entrada; ela não foi aplicada.")
+                return
             self._set_text(self.translation_text, suggestion)
             self.dirty = True
             self.message_var.set("Sugestão inserida no editor. Revise e salve para confirmar.")

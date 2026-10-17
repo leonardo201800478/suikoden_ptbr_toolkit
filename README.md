@@ -37,6 +37,45 @@ Links: https://github.com/AssetRipper/AssetRipper · https://github.com/nesrak1/
 
 Os arquivos fornecidos apresentam assinatura `UnityFS` e estão em `StreamingAssets/aa/StandaloneWindows64`, estrutura típica de Unity Addressables. Isso identifica o contêiner, não ainda o recurso que contém cada texto.
 
+## Fluxo fiel de TextAsset com UABEA
+
+O fluxo de referência para testar exportação/importação é o UABEA:
+
+1. **FILE** → carregar o bundle para a memória (não usar *Load File*).
+2. **INFO** → confirmar **Version Select** apenas com **OK**.
+3. Selecionar o objeto **TextAsset** → **Plugin → Export** para gerar o `.txt`.
+4. Para importar, repetir a abertura e seleção do mesmo TextAsset; escolher **Plugin → Import**,
+   selecionar o `.txt` com o mesmo nome e salvar o bundle modificado.
+
+O módulo `suikoden_tool.uabea_textasset_workflow` trata o `.txt` como bytes opacos: não
+decodifica, não converte para JSON e não normaliza quebras de linha nem caracteres de controle.
+Pode preparar uma cópia com o mesmo nome para importação e comparar SHA-256/bytes entre arquivos.
+Ele **não automatiza a interface do UABEA nem grava bundles**.
+
+```python
+from pathlib import Path
+from suikoden_tool.uabea_textasset_workflow import (
+    compare_uabea_textassets,
+    prepare_uabea_import,
+)
+
+result = prepare_uabea_import(
+    Path(r"C:\\traducao\\text_gsd1_en.txt"),
+    Path(r"C:\\traducao\\pronto_para_importar"),
+)
+print(result)
+
+# Em teste de round-trip sem edição, o arquivo reexportado deve ser idêntico.
+print(compare_uabea_textassets(
+    Path(r"C:\\traducao\\text_gsd1_en.txt"),
+    Path(r"C:\\traducao\\reexportado.txt"),
+))
+```
+
+O conversor JSON existente é auxiliar para análise/edição, **não** é o arquivo a ser entregue
+ao comando **Plugin → Import** do UABEA. Teste primeiro um round-trip sem edição e depois
+experimente com textos traduzidos.
+
 ## Próximas etapas
 1. Inventariar os bundles originais do jogo e registrar hashes.
 2. Identificar `MonoBehaviour`, `TextAsset`, tabelas e fontes via ferramentas externas.

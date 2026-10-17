@@ -1,0 +1,31 @@
+name: Proposta de melhoria
+description: Sugira uma funcionalidade ou melhoria técnica.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema ou necessidade
+      description: Qual tarefa está difícil ou ainda não é possível realizar?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Solução sugerida
+      description: Descreva a funcionalidade e o comportamento esperado.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: Outras soluções ou limitações conhecidas.
+  - type: checkboxes
+    id: rights
+    attributes:
+      label: Conteúdo enviado
+      options:
+        - label: Não anexarei bundles, executáveis, dumps integrais nem materiais proprietários do jogo.
+          required: true

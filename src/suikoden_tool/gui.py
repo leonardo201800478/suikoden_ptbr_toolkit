@@ -707,7 +707,7 @@ class TranslationApp:
             return
         translated_name = filedialog.askopenfilename(
             title="Selecione o JSON já traduzido",
-            initialdir=str(Path(translated_name).parent) if False else str(Path(original_name).parent),
+            initialdir=str(Path(original_name).parent),
             filetypes=(("Arquivos JSON", "*.json"), ("Todos os arquivos", "*.*")),
         )
         if not translated_name:

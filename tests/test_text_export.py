@@ -41,6 +41,25 @@ def test_export_creates_catalog_and_preserves_original_text(tmp_path):
     assert catalog["entries"][2]["original"] == ""
 
 
+def test_export_preserves_all_source_markers_and_does_not_modify_prepared_json(tmp_path):
+    entries = [
+        {"id": 1, "text": "♂㈱ ♂① ♂② ♂⑩"},
+        {"id": 2, "text": "Linha A∠Linha B∨Próxima☆"},
+        {"id": 3, "text": "ＬＶ２ ★☆ ★★☆☆ ◎1"},
+        {"id": 4, "text": "Espaços  finais  e ? marcador literal"},
+        {"id": 5, "text": "CRLF\\r\\nLF\\nTAB\\t"},
+    ]
+    source = write_source(tmp_path / "text_gsd1_en.json", entries)
+    source_bytes = source.read_bytes()
+    output = tmp_path / "text_gsd1_en.catalog.json"
+
+    result = export_text_catalog(source, output)
+    originals = [entry["original"] for entry in result["catalog"]["entries"]]
+
+    assert originals == [item["text"] for item in entries]
+    assert source.read_bytes() == source_bytes
+
+
 def test_export_rejects_duplicate_source_ids(tmp_path):
     source = write_source(
         tmp_path / "duplicate.json",

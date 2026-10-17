@@ -30,9 +30,9 @@ def test_extract_from_bundles_parses_m_script_not_entire_dump(tmp_path, monkeypa
                 ]
             }, ensure_ascii=False)
             return _process(
-                "ID: 42 (ClassID: 49) TextAsset\\n"
-                "  m_Name (string) text_dialogue_en\\n"
-                f"  m_Script (string) {script}\\n"
+                "ID: 42 (ClassID: 49) TextAsset\n"
+                "  m_Name (string) text_dialogue_en\n"
+                f"  m_Script (string) {script}\n"
             )
         raise AssertionError(f"Comando inesperado: {command}")
 
@@ -53,3 +53,32 @@ def test_extract_from_bundles_parses_m_script_not_entire_dump(tmp_path, monkeypa
     ]
     assert catalog["entries"][1]["control_tokens"] == ["?"]
     assert json.loads(output.read_text(encoding="utf-8"))["entry_count"] == 2
+
+
+def test_extract_from_bundles_escapes_raw_control_characters_inside_text(tmp_path, monkeypatch):
+    bundle_name = "03cf0288ba3ecaca0776d7fadf1f0bb6.bundle"
+    (tmp_path / bundle_name).write_bytes(b"fake bundle")
+    tool = tmp_path / "UnityDataTool.exe"
+    tool.write_bytes(b"fake executable")
+
+    def fake_run(command, **kwargs):
+        if "archive" in command:
+            return _process(json.dumps([{"path": "CAB-test", "flags": "SerializedFile"}]))
+        if "objectlist" in command:
+            return _process(json.dumps([{"id": 42, "typeName": "TextAsset"}]))
+        if "dump" in command:
+            # O caractere de controle cru simula o dump problemático do jogo.
+            script = '{"textList":[{"id":7,"text":"line one\x0bline two ?"}]}'
+            return _process(
+                "ID: 42 (ClassID: 49) TextAsset\n"
+                "  m_Name (string) text_gsd2_en\n"
+                f"  m_Script (string) {script}\n"
+            )
+        raise AssertionError(f"Comando inesperado: {command}")
+
+    monkeypatch.setattr("suikoden_tool.text_extractor.subprocess.run", fake_run)
+    catalog = extract_from_bundles(
+        tmp_path, tool, tmp_path / "catalog.json", bundle_names=(bundle_name,)
+    )
+    assert catalog["entry_count"] == 1
+    assert catalog["entries"][0]["source_text"] == "line one\x0bline two ?"

@@ -79,7 +79,7 @@ Esse esquema é inicial e não é o formato produzido por `text export`. A unifi
 
 ## Validação e estatísticas
 
-`suikoden-tool text validate --input catalog.json` verifica campos obrigatórios, tipos, IDs duplicados, status, traduções pendentes e entradas marcadas com mudança de origem. Com `--source extracted.json`, também compara os IDs e os textos originais contra uma nova extração. Erros estruturais resultam em código de saída diferente de zero; pendências e divergências de origem são avisos.
+`suikoden-tool text validate --input catalog.json` verifica campos obrigatórios, tipos, IDs duplicados, status, traduções pendentes e entradas marcadas com mudança de origem. Também emite avisos quando uma tradução preenchida tem quantidade diferente do marcador conhecido `∠` ou de quebras de linha (`CRLF`, `LF` e `CR`) em relação ao original. Esses avisos são conservadores: não definem a semântica de `∠` nem bloqueiam a validação estrutural. Com `--source extracted.json`, também compara os IDs e os textos originais contra uma nova extração. Erros estruturais resultam em código de saída diferente de zero; pendências, possíveis alterações de layout e divergências de origem são avisos.
 
 `suikoden-tool text stats --input catalog.json` mostra total, estados `pending`, `translated`, `reviewed`, `needs_review`, `orphaned` e percentual concluído. Os comandos de validação e estatística não alteram o catálogo.
 

@@ -16,7 +16,7 @@ def test_converts_textlist_json_to_separate_output_and_preserves_source(tmp_path
 
     assert result["kind"] == "textList"
     assert result["entries"] == 2
-    assert payload["textList"][0]["text"] == "Hello\\nworld"
+    assert payload["textList"][0]["text"] == "Hello\nworld"
     assert source.read_text(encoding="utf-8") == raw
     assert output != source
 

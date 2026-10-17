@@ -423,9 +423,11 @@ class TranslationApp:
                     candidates, key=lambda item: item.get("textlist_count") or 0
                 )
                 if len(candidates) > 1 and not preferred:
+                    candidate_count = len(candidates)
+                    chosen_name = selected["name"]
                     self.root.after(
                         0,
-                        lambda name=bundle.name, count=len(candidates), chosen=selected["name"]:
+                        lambda name=bundle.name, count=candidate_count, chosen=chosen_name:
                         self._append_extraction_log(
                             f"Aviso: {name} contém {count} TextAssets textList; "
                             f"selecionado '{chosen}' por ter a maior quantidade de entradas."

@@ -53,9 +53,17 @@ gera:
 | `entries[].translation` | Tradução editável; começa vazia. |
 | `entries[].status` | Começa como `pending`. O conjunto de estados ainda não está formalizado. |
 
-O exportador valida que a raiz contenha `textList`, que cada item seja um objeto com `id` e `text`, que `text` seja string e que IDs sejam únicos. Não exige atualmente um tipo específico para `id` nem valida o conjunto de estados depois da exportação.
+O exportador valida que a raiz contenha `textList`, que cada item seja um objeto com `id` e `text`, que `text` seja string e que IDs sejam únicos. IDs devem ser strings ou inteiros (booleanos não são aceitos). Se a saída já existir, o comando valida o catálogo e tenta uma mesclagem segura.
 
-**Aviso de perda de dados:** cada execução cria um catálogo novo com traduções vazias. Não reexporte sobre um catálogo traduzido antes de fazer backup. A mesclagem segura ainda não está implementada.
+### Política de atualização segura
+
+- ID e texto original compatíveis: preserva tradução, status e campos adicionais.
+- ID existente com texto original alterado: atualiza `original`, preserva a tradução, grava `previous_original`, define `source_changed: true` e muda status para `needs_review`.
+- ID novo: adiciona entrada com tradução vazia e status `pending`.
+- ID ausente na nova extração: mantém a entrada e tradução, marcando status `orphaned`.
+- Catálogo existente malformado, de outro recurso ou idioma: aborta sem modificar a saída.
+
+A atualização não apaga silenciosamente traduções. Mudanças de origem exigem revisão humana; não se deve considerar a tradução automaticamente correta.
 
 ## 2. Esquema geral inicial
 
@@ -68,6 +76,14 @@ O construtor `make_translation_entry` de `translation_schema.py` gera campos par
 - `control_tokens`, `pointer_metadata`, `status`, `notes`
 
 Esse esquema é inicial e não é o formato produzido por `text export`. A unificação dos formatos deve ser uma decisão explícita, com migração e testes.
+
+## Validação e estatísticas
+
+`suikoden-tool text validate --input catalog.json` verifica campos obrigatórios, tipos, IDs duplicados, status, traduções pendentes e entradas marcadas com mudança de origem. Com `--source extracted.json`, também compara os IDs e os textos originais contra uma nova extração. Erros estruturais resultam em código de saída diferente de zero; pendências e divergências de origem são avisos.
+
+`suikoden-tool text stats --input catalog.json` mostra total, estados `pending`, `translated`, `reviewed`, `needs_review`, `orphaned` e percentual concluído. Os comandos de validação e estatística não alteram o catálogo.
+
+Estados reconhecidos: `pending`, `translated`, `reviewed`, `needs_review` e `orphaned`.
 
 ## Regras de preservação
 

@@ -150,6 +150,7 @@ class TranslationApp:
             side="left", padx=(16, 0), pady=(5, 0)
         )
         ttk.Button(header, text="Abrir catálogo", command=self.choose_catalog).pack(side="right")
+        ttk.Button(header, text="Comparar JSON por ID", command=self.compare_translation_jsons).pack(side="right", padx=(0, 8))
         ttk.Button(header, text="Carregar JSON preparado", command=self.choose_prepared_text_json).pack(side="right", padx=(0, 8))
         ttk.Button(header, text="Importar dumps TextAsset", command=self.choose_textasset_dumps).pack(side="right", padx=(0, 8))
         self.file_label = ttk.Label(header, text="Nenhum catálogo aberto", style="Muted.TLabel")
@@ -695,6 +696,217 @@ class TranslationApp:
             "\n\nOs dumps .txt originais foram preservados.",
             parent=self.root,
         )
+
+    def compare_translation_jsons(self) -> None:
+        """Compara JSON original e traduzido por ID, sem alterar nenhum arquivo."""
+        original_name = filedialog.askopenfilename(
+            title="Selecione o JSON original em inglês",
+            filetypes=(("Arquivos JSON", "*.json"), ("Todos os arquivos", "*.*")),
+        )
+        if not original_name:
+            return
+        translated_name = filedialog.askopenfilename(
+            title="Selecione o JSON já traduzido",
+            initialdir=str(Path(translated_name).parent) if False else str(Path(original_name).parent),
+            filetypes=(("Arquivos JSON", "*.json"), ("Todos os arquivos", "*.*")),
+        )
+        if not translated_name:
+            return
+
+        def load_text_entries(filename: str) -> tuple[dict[str, Any], dict[tuple[type, Any], dict[str, Any]]]:
+            try:
+                data = json.loads(Path(filename).read_text(encoding="utf-8-sig"))
+            except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+                raise ValueError(f"Não foi possível ler {Path(filename).name}: {exc}") from exc
+            if not isinstance(data, dict) or not isinstance(data.get("textList"), list):
+                raise ValueError(
+                    f"{Path(filename).name} não possui uma lista 'textList'. "
+                    "Selecione os JSONs de origem/lote, não um catálogo interno do editor."
+                )
+            entries: dict[tuple[type, Any], dict[str, Any]] = {}
+            for position, entry in enumerate(data["textList"], start=1):
+                if not isinstance(entry, dict) or "id" not in entry or not isinstance(entry.get("text"), str):
+                    raise ValueError(
+                        f"{Path(filename).name}: entrada {position} precisa conter 'id' e 'text' textual."
+                    )
+                entry_id = entry["id"]
+                if isinstance(entry_id, bool) or not isinstance(entry_id, (int, str)):
+                    raise ValueError(
+                        f"{Path(filename).name}: tipo de ID inválido na entrada {position}: {entry_id!r}."
+                    )
+                key = (type(entry_id), entry_id)
+                if key in entries:
+                    raise ValueError(f"{Path(filename).name}: ID duplicado {entry_id!r}.")
+                entries[key] = entry
+            return data, entries
+
+        try:
+            _original_data, original_entries = load_text_entries(original_name)
+            _translated_data, translated_entries = load_text_entries(translated_name)
+        except ValueError as exc:
+            messagebox.showerror("Não foi possível comparar os JSONs", str(exc), parent=self.root)
+            return
+
+        original_keys = set(original_entries)
+        translated_keys = set(translated_entries)
+        all_keys = original_keys | translated_keys
+
+        def display_id(key: tuple[type, Any]) -> str:
+            return str(key[1])
+
+        def compare_sort(key: tuple[type, Any]) -> tuple[int, Any, str]:
+            value = key[1]
+            return (0, value, key[0].__name__) if isinstance(value, int) else (1, str(value), key[0].__name__)
+
+        window = tk.Toplevel(self.root)
+        window.title("Comparação de tradução por ID")
+        window.geometry("1250x760")
+        window.minsize(900, 560)
+        window.configure(bg=BG)
+        window.transient(self.root)
+
+        top = ttk.Frame(window, padding=12)
+        top.pack(fill="x")
+        summary_var = tk.StringVar()
+        ttk.Label(top, text=f"Original: {Path(original_name).name}", style="Muted.TLabel").pack(anchor="w")
+        ttk.Label(top, text=f"Traduzido: {Path(translated_name).name}", style="Muted.TLabel").pack(anchor="w", pady=(2, 5))
+        ttk.Label(top, textvariable=summary_var, style="Header.TLabel").pack(anchor="w", pady=(4, 0))
+
+        controls = ttk.Frame(window, padding=(12, 0, 12, 8))
+        controls.pack(fill="x")
+        filter_var = tk.StringVar(value="Todos")
+        filter_combo = ttk.Combobox(
+            controls,
+            textvariable=filter_var,
+            state="readonly",
+            values=("Todos", "Diferentes/traduzidos", "Sem tradução", "Sem ID correspondente", "Idênticos"),
+            width=24,
+        )
+        filter_combo.pack(side="left")
+        search_var = tk.StringVar()
+        search_entry = ttk.Entry(controls, textvariable=search_var)
+        search_entry.pack(side="left", fill="x", expand=True, padx=(8, 0))
+        search_entry.insert(0, "")
+        ttk.Label(controls, text="Buscar por ID ou texto").pack(side="right", padx=(8, 0))
+
+        table_frame = ttk.Frame(window, padding=(12, 0, 12, 8))
+        table_frame.pack(fill="both", expand=True)
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=1)
+        tree = ttk.Treeview(table_frame, columns=("id", "status", "original", "translated"), show="headings")
+        for col, title, width in (
+            ("id", "ID", 90), ("status", "COMPARAÇÃO", 150),
+            ("original", "ORIGINAL EM INGLÊS", 440), ("translated", "TEXTO TRADUZIDO", 440),
+        ):
+            tree.heading(col, text=title)
+            tree.column(col, width=width, minwidth=70, stretch=(col in {"original", "translated"}))
+        tree.tag_configure("missing", foreground="#ff8585")
+        tree.tag_configure("same", foreground=MUTED)
+        tree.tag_configure("changed", foreground=FG)
+        scrollbar_y = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+        scrollbar_x = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
+        tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        scrollbar_y.grid(row=0, column=1, sticky="ns")
+        scrollbar_x.grid(row=1, column=0, sticky="ew")
+
+        detail = ttk.Frame(window, padding=(12, 0, 12, 12))
+        detail.pack(fill="x")
+        detail.columnconfigure(0, weight=1)
+        detail.columnconfigure(1, weight=1)
+        ttk.Label(detail, text="ORIGINAL COMPLETO", style="Panel.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        ttk.Label(detail, text="TRADUÇÃO COMPLETA", style="Panel.TLabel").grid(row=0, column=1, sticky="w", pady=(0, 4), padx=(8, 0))
+        original_detail = tk.Text(detail, height=4, wrap="word", bg=PANEL, fg=FG, relief="flat", padx=8, pady=6, state="disabled")
+        translated_detail = tk.Text(detail, height=4, wrap="word", bg=PANEL_ALT, fg=FG, relief="flat", padx=8, pady=6, state="disabled")
+        original_detail.grid(row=1, column=0, sticky="ew")
+        translated_detail.grid(row=1, column=1, sticky="ew", padx=(8, 0))
+
+        row_keys: dict[str, tuple[type, Any]] = {}
+        ordered_keys = sorted(all_keys, key=compare_sort)
+
+        def set_detail(widget: tk.Text, text: str) -> None:
+            widget.configure(state="normal")
+            widget.delete("1.0", "end")
+            widget.insert("1.0", text)
+            widget.configure(state="disabled")
+
+        def row_info(key: tuple[type, Any]) -> tuple[str, str, str, str, str]:
+            original_entry = original_entries.get(key)
+            translated_entry = translated_entries.get(key)
+            original_text = original_entry.get("text", "") if original_entry else ""
+            translated_text = translated_entry.get("text", "") if translated_entry else ""
+            if original_entry is None:
+                status = "Só no traduzido"
+            elif translated_entry is None:
+                status = "ID ausente"
+            elif not translated_text.strip():
+                status = "Sem tradução"
+            elif original_text == translated_text:
+                status = "Idêntico"
+            else:
+                status = "Diferente"
+            return display_id(key), status, original_text, translated_text, status
+
+        def refresh_rows(*_args: Any) -> None:
+            tree.delete(*tree.get_children())
+            row_keys.clear()
+            filter_value = filter_var.get()
+            query = search_var.get().casefold().strip()
+            for key in ordered_keys:
+                id_text, status, original_text, translated_text, _ = row_info(key)
+                if filter_value == "Diferentes/traduzidos" and status != "Diferente":
+                    continue
+                if filter_value == "Sem tradução" and status != "Sem tradução":
+                    continue
+                if filter_value == "Sem ID correspondente" and status not in {"ID ausente", "Só no traduzido"}:
+                    continue
+                if filter_value == "Idênticos" and status != "Idêntico":
+                    continue
+                if query and query not in id_text.casefold() and query not in original_text.casefold() and query not in translated_text.casefold():
+                    continue
+                tag = "missing" if status in {"ID ausente", "Só no traduzido", "Sem tradução"} else "same" if status == "Idêntico" else "changed"
+                iid = f"row_{len(row_keys)}"
+                row_keys[iid] = key
+                tree.insert("", "end", iid=iid, values=(id_text, status, original_text, translated_text), tags=(tag,))
+            tree.selection_remove(tree.selection())
+
+        def on_row_selected(_event: Any = None) -> None:
+            selection = tree.selection()
+            if not selection:
+                return
+            key = row_keys.get(selection[0])
+            if key is None:
+                return
+            _id, _status, original_text, translated_text, _ = row_info(key)
+            set_detail(original_detail, original_text)
+            set_detail(translated_detail, translated_text)
+
+        filter_var.trace_add("write", refresh_rows)
+        search_var.trace_add("write", refresh_rows)
+        tree.bind("<<TreeviewSelect>>", on_row_selected)
+        tree.bind("<Double-1>", on_row_selected)
+
+        translated_count = sum(
+            1 for key in original_keys & translated_keys
+            if translated_entries[key].get("text", "").strip()
+            and translated_entries[key].get("text") != original_entries[key].get("text")
+        )
+        empty_count = sum(
+            1 for key in original_keys & translated_keys
+            if not translated_entries[key].get("text", "").strip()
+        )
+        missing_count = len(original_keys - translated_keys)
+        extra_count = len(translated_keys - original_keys)
+        summary_var.set(
+            f"Original: {len(original_entries)} IDs · Traduzido: {len(translated_entries)} IDs · "
+            f"Diferentes: {translated_count} · Vazios: {empty_count} · Ausentes: {missing_count} · Extras: {extra_count}"
+        )
+        refresh_rows()
+        if tree.get_children():
+            first = tree.get_children()[0]
+            tree.selection_set(first)
+            tree.focus(first)
+            on_row_selected()
 
     def choose_catalog(self) -> None:
         filename = filedialog.askopenfilename(

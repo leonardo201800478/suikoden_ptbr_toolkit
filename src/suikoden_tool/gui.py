@@ -849,18 +849,60 @@ class TranslationApp:
                     parent=window,
                 )
                 return
-            blank = [key for key in matched if not translated_entries[key].get("text", "").strip()]
-            if blank:
+
+            # Entradas sem texto nos dois JSONs não têm conteúdo para importar.
+            # Elas são ignoradas; texto traduzido sem original exige revisão.
+            empty_both = [
+                key for key in matched
+                if not (original_entries.get(key, {}).get("text", "").strip())
+                and not translated_entries[key].get("text", "").strip()
+            ]
+            translated_without_original = [
+                key for key in matched
+                if not original_entries.get(key, {}).get("text", "").strip()
+                and translated_entries[key].get("text", "").strip()
+            ]
+            if translated_without_original:
+                ids = ", ".join(display_id(key) for key in translated_without_original[:20])
+                suffix = "…" if len(translated_without_original) > 20 else ""
                 messagebox.showwarning(
                     "Importação cancelada",
-                    f"Foram encontrados {len(blank)} textos traduzidos vazios. "
-                    "Preencha-os ou revise o JSON antes de importar; nenhum texto foi alterado.",
+                    "Há textos traduzidos sem texto correspondente no original. "
+                    f"Revise os IDs: {ids}{suffix}. Nenhum texto foi alterado.",
                     parent=window,
                 )
                 return
+
+            blank = [
+                key for key in matched
+                if original_entries.get(key, {}).get("text", "").strip()
+                and not translated_entries[key].get("text", "").strip()
+            ]
+            if blank:
+                ids = ", ".join(display_id(key) for key in blank[:20])
+                suffix = "…" if len(blank) > 20 else ""
+                messagebox.showwarning(
+                    "Importação cancelada",
+                    f"Foram encontrados {len(blank)} textos traduzidos vazios para originais preenchidos. "
+                    f"Revise os IDs: {ids}{suffix}. Nenhum texto foi alterado.",
+                    parent=window,
+                )
+                return
+
+            importable = [key for key in matched if key not in empty_both]
+            if not importable:
+                messagebox.showinfo(
+                    "Nada para importar",
+                    "Todas as entradas correspondentes estão vazias tanto no original quanto no traduzido. "
+                    "Nenhum texto precisa ser importado.",
+                    parent=window,
+                )
+                return
+
             if not messagebox.askyesno(
                 "Confirmar importação",
-                f"Importar {len(matched)} textos do JSON traduzido para o catálogo aberto?\\n\\n"
+                f"Importar {len(importable)} textos do JSON traduzido para o catálogo aberto?\\n\\n"
+                f"{len(empty_both)} entradas vazias nos dois JSONs serão ignoradas. "
                 "Os textos correspondentes existentes no editor serão substituídos e salvos como traduzidos. "
                 "IDs sem correspondência serão ignorados. Esta ação não pode ser desfeita automaticamente.",
                 parent=window,
@@ -868,7 +910,7 @@ class TranslationApp:
                 return
 
             try:
-                for key in matched:
+                for key in importable:
                     entry = editor_by_id[key]
                     saved = save_entry(
                         self.catalog_path,
@@ -895,10 +937,11 @@ class TranslationApp:
                 current = self._current_entry()
                 if current is not None:
                     self._display_entry(current)
-            self.message_var.set(f"{len(matched)} textos importados do JSON traduzido.")
+            self.message_var.set(f"{len(importable)} textos importados do JSON traduzido.")
             messagebox.showinfo(
                 "Importação concluída",
-                f"Foram importados {len(matched)} textos por ID para o catálogo do editor.",
+                f"Foram importados {len(importable)} textos por ID para o catálogo do editor. "
+                f"{len(empty_both)} entradas vazias nos dois JSONs foram ignoradas.",
                 parent=window,
             )
 

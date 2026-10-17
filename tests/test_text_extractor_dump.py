@@ -70,8 +70,8 @@ def test_extract_from_bundles_rejects_raw_control_characters_without_repair(tmp_
             # Simula JSON inválido emitido pelo dump: a extração não deve repará-lo.
             script = '{"textList":[{"id":7,"text":"line one\\x0bline two ?"}]}'
             return _process(
-                "ID: 42 (ClassID: 49) TextAsset\\n"
-                "  m_Name (string) text_gsd2_en\\n"
+                "ID: 42 (ClassID: 49) TextAsset\n"
+                "  m_Name (string) text_gsd2_en\n"
                 f"  m_Script (string) {script}\\n"
             )
         raise AssertionError(f"Comando inesperado: {command}")

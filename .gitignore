@@ -25,3 +25,6 @@ Thumbs.db
 *.resource
 *.exe
 *.dll
+/tools/AssetRipper/
+/tools/UABEA/
+/tools/UnityDataTools/

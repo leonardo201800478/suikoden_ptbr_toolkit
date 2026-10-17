@@ -169,19 +169,49 @@ def extract_textasset_json(
         detail = "; ".join(failures[:4]) or "nenhum objeto continha um JSON com lista textList"
         raise ValueError(f"Não foi possível extrair um TextAsset com textList: {detail}")
 
+    seen_ids: set[tuple[type, object]] = set()
     for index, item in enumerate(payload["textList"]):
-        if not isinstance(item, dict) or "id" not in item or not isinstance(item.get("text"), str):
+        if (
+            not isinstance(item, dict)
+            or "id" not in item
+            or isinstance(item.get("id"), bool)
+            or not isinstance(item.get("id"), (str, int))
+            or not isinstance(item.get("text"), str)
+        ):
             raise ValueError(
-                f"TextAsset {selected_name!r}: entrada {index} não contém id e text string válidos."
+                f"TextAsset {selected_name!r}: entrada {index} não contém id string/inteiro "
+                "e text string válidos."
             )
+        key = (type(item["id"]), item["id"])
+        if key in seen_ids:
+            raise ValueError(
+                f"TextAsset {selected_name!r}: ID duplicado na entrada {index}: {item['id']!r}."
+            )
+        seen_ids.add(key)
+
+    # A verificação de integridade ocorre na extração: serializa e relê o JSON
+    # para confirmar que todos os textos e marcadores foram preservados. Não
+    # aplicar regras de integridade do texto ao carregar um catálogo para tradução.
+    serialized = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+    try:
+        round_trip = json.loads(serialized)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Falha na verificação de integridade do TextAsset: {exc}") from exc
+    if round_trip != payload:
+        raise ValueError(
+            f"Falha na verificação de integridade do TextAsset {selected_name!r}: "
+            "o JSON serializado diverge dos dados extraídos."
+        )
 
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_name(f".{output.name}.extract.tmp")
     try:
-        temporary.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        temporary.write_text(serialized, encoding="utf-8")
+        # Releitura do arquivo gravado confirma a integridade real no disco.
+        if json.loads(temporary.read_text(encoding="utf-8")) != payload:
+            raise ValueError(
+                f"Falha na verificação de integridade do arquivo extraído: {output}"
+            )
         temporary.replace(output)
     finally:
         if temporary.exists():

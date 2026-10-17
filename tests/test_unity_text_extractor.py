@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from suikoden_tool.unity_text_extractor import extract_textasset_json
+from suikoden_tool.unity_text_extractor import _dump_textasset_fields, extract_textasset_json
 
 
 def _fake_process(stdout):
@@ -91,3 +91,17 @@ def test_extract_requires_asset_name_when_multiple_json_textassets_exist(tmp_pat
         asset_name="text_two",
     )
     assert result["asset_name"] == "text_two"
+
+
+def test_dump_textasset_fields_preserves_trailing_whitespace_and_newlines():
+    dump = (
+        "ID: 42 (ClassID: 49) TextAsset\\r\\n"
+        "  m_Name (string) text_asset  \\r\\n"
+        "  m_Script (string) {\\\"textList\\\":[{\\\"id\\\":1,\\\"text\\\":\\\"A∠B\\\"}]}\\r\\n\\r\\n"
+    )
+
+    name, script = _dump_textasset_fields(dump)
+
+    assert name == "text_asset  "
+    assert script.endswith("\\r\\n\\r\\n")
+    assert "∠" in script

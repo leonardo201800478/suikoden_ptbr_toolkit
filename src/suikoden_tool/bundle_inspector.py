@@ -1,5 +1,7 @@
 """Leitura inicial e não destrutiva do cabeçalho de bundles UnityFS."""
+
 from __future__ import annotations
+
 import hashlib
 import struct
 from pathlib import Path

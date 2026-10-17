@@ -10,6 +10,52 @@ from suikoden_tool.text_extractor import _loads_textasset_json
 from suikoden_tool.unity_text_extractor import _dump_textasset_fields
 
 
+def _load_textasset_payload(script: str) -> Any:
+    """Carrega JSON e tenta apenas reparos estruturais conservadores."""
+    try:
+        return _loads_textasset_json(script)
+    except json.JSONDecodeError as original_error:
+        # Alguns TextAssets têm objetos adjacentes sem vírgula entre eles.
+        # Só inserimos vírgula entre tokens estruturais fora de strings; nunca
+        # alteramos pontuação dentro de diálogos.
+        repaired: list[str] = []
+        in_string = False
+        escaped = False
+        index = 0
+        changed = False
+        while index < len(script):
+            char = script[index]
+            repaired.append(char)
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                index += 1
+                continue
+            if char == '"':
+                in_string = True
+                index += 1
+                continue
+            if char in "}]":
+                lookahead = index + 1
+                while lookahead < len(script) and script[lookahead].isspace():
+                    lookahead += 1
+                if lookahead < len(script) and script[lookahead] in '{["' and script[lookahead] != ',':
+                    # Adjacência de valores só é válida se separada por vírgula.
+                    repaired.append(",")
+                    changed = True
+            index += 1
+        if changed:
+            try:
+                return _loads_textasset_json("".join(repaired))
+            except json.JSONDecodeError:
+                pass
+        raise original_error
+
+
 def import_dump_to_catalog(dump_path: Path, output_path: Path | None = None) -> dict[str, Any]:
     """Lê um dump UnityDataTool/UABEA e cria um catálogo JSON editável.
 
@@ -22,7 +68,7 @@ def import_dump_to_catalog(dump_path: Path, output_path: Path | None = None) -> 
     dump = dump_path.read_text(encoding="utf-8-sig")
     asset_name, script = _dump_textasset_fields(dump)
     try:
-        payload = _loads_textasset_json(script)
+        payload = _load_textasset_payload(script)
     except json.JSONDecodeError as exc:
         start = max(0, exc.pos - 100)
         end = min(len(script), exc.pos + 100)
@@ -59,8 +105,6 @@ def import_dump_to_catalog(dump_path: Path, output_path: Path | None = None) -> 
             "status": "pending",
         })
 
-    # O nome completo do dump identifica de forma estável a fonte, sem depender do
-    # nome do bundle pai, que não faz parte do padrão de importação do UABEA.
     resource = dump_path.stem
     catalog = {
         "schema_version": 1,
@@ -77,12 +121,12 @@ def import_dump_to_catalog(dump_path: Path, output_path: Path | None = None) -> 
     if destination.exists():
         raise FileExistsError(
             f"O catálogo já existe e não será sobrescrito: {destination}. "
-            "Escolha outro destino ou mova o catálogo existente."
+            "Escolha outro destino ou mova el catálogo existente."
         )
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f".{destination.name}.tmp")
     try:
-        temporary.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        temporary.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
         temporary.replace(destination)
     finally:
         if temporary.exists():

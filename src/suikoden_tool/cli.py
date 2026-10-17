@@ -5,13 +5,13 @@ import json
 from pathlib import Path
 
 from suikoden_tool.bundle_inspector import inspect_bundle, inventory_bundles
+from suikoden_tool.text_batch import export_translation_batch, import_translation_batch
 from suikoden_tool.text_catalog import (
     _read_json,
     catalog_stats,
     export_text_catalog,
     validate_catalog,
 )
-from suikoden_tool.text_batch import export_translation_batch, import_translation_batch
 from suikoden_tool.translation_schema import make_translation_entry
 
 

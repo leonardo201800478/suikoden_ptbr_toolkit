@@ -1,43 +1,80 @@
-# Formato JSON de tradução (rascunho)
+# Formato JSON de tradução
 
-**Status:** esquema inicial, ainda não é um contrato estável. Os campos podem evoluir conforme os assets reais forem identificados. O campo `schema_version` deve ser incrementado quando houver alterações incompatíveis.
+**Status:** há dois formatos em uso no fluxo atual. O modelo geral de tradução e o catálogo exportado de `textList` têm campos diferentes; não os trate como intercambiáveis sem uma migração explícita.
 
-## Estrutura do documento
+## 1. Catálogo exportado por `suikoden-tool text export`
+
+A entrada deve ser um JSON com uma lista `textList` cujos itens contenham `id` e `text`:
+
+```json
+{
+  "textList": [
+    {"id": 1, "text": "Power?"},
+    {"id": 2, "text": "Is it power that we seek?"}
+  ]
+}
+```
+
+O comando:
+
+```powershell
+suikoden-tool text export --input extracted.json --output catalog.json --target-language pt-BR
+```
+
+gera:
 
 ```json
 {
   "schema_version": 1,
-  "project": "Suikoden I & II HD Remaster PT-BR",
-  "game": "suikoden_i",
-  "entries": []
+  "resource": "extracted",
+  "source_language": "en",
+  "target_language": "pt-BR",
+  "entries": [
+    {
+      "id": 1,
+      "original": "Power?",
+      "translation": "",
+      "status": "pending"
+    }
+  ]
 }
 ```
 
-Valores esperados para `game`: `suikoden_i` ou `suikoden_ii`.
+### Campos do catálogo exportado
 
-## Campos de uma entrada
-
-| Campo | Propósito |
+| Campo | Significado |
 |---|---|
-| `id` | Identificador estável definido pelo toolkit; não presumir que seja o ID interno do jogo. |
-| `game` | Jogo ao qual a entrada pertence, quando conhecido. |
-| `asset_name`, `asset_path` | Nome e caminho do asset de origem. |
-| `object_path_id`, `text_id` | Identificadores técnicos descobertos na extração. |
-| `source_text` | Texto original, preservado sem tradução. |
-| `translation_pt_br` | Tradução brasileira. |
-| `context` | Contexto narrativo ou funcional para o tradutor. |
-| `text_type` | Categoria como diálogo, menu ou descrição, após classificação. |
-| `max_characters`, `max_lines`, `max_width_px` | Limites conhecidos; usar `null` se não confirmados. |
-| `control_tokens` | Tokens de controle identificados e sua ordem, quando aplicável. |
-| `pointer_metadata` | Metadados de referências/ponteiros, se descobertos. |
-| `status` | Estado de tradução/revisão. |
-| `notes` | Observações e evidências. |
+| `schema_version` | Versão do formato de catálogo. |
+| `resource` | Nome derivado do nome do arquivo de entrada, sem extensão. |
+| `source_language` | Atualmente fixado como `en` pelo exportador. |
+| `target_language` | Idioma passado em `--target-language`, padrão `pt-BR`. |
+| `entries[].id` | ID original vindo do TextAsset; o exportador rejeita duplicatas. |
+| `entries[].original` | Texto original, incluindo marcadores e quebras de linha. |
+| `entries[].translation` | Tradução editável; começa vazia. |
+| `entries[].status` | Começa como `pending`. O conjunto de estados ainda não está formalizado. |
 
-## Recomendações
+O exportador valida que a raiz contenha `textList`, que cada item seja um objeto com `id` e `text`, que `text` seja string e que IDs sejam únicos. Não exige atualmente um tipo específico para `id` nem valida o conjunto de estados depois da exportação.
 
-- Use `null` para limites desconhecidos; não converta estimativas em regras confirmadas.
-- Não remova tags, tokens, variáveis dinâmicas ou quebras de linha do texto original.
-- Registre o significado dos tokens somente quando houver evidência.
-- Não use `id` gerado pelo toolkit como substituto de um ID interno do jogo.
-- Guarde exemplos sintéticos nos testes; não versionar dumps de texto proprietários.
-- Antes de uma exportação/importação real, definir serialização determinística e testes de ida e volta.
+**Aviso de perda de dados:** cada execução cria um catálogo novo com traduções vazias. Não reexporte sobre um catálogo traduzido antes de fazer backup. A mesclagem segura ainda não está implementada.
+
+## 2. Esquema geral inicial
+
+O construtor `make_translation_entry` de `translation_schema.py` gera campos para um fluxo mais rico:
+
+- `id`, `game`, `asset_name`, `asset_path`
+- `object_path_id`, `text_id`
+- `source_text`, `translation_pt_br`, `context`, `text_type`
+- `max_characters`, `max_lines`, `max_width_px`
+- `control_tokens`, `pointer_metadata`, `status`, `notes`
+
+Esse esquema é inicial e não é o formato produzido por `text export`. A unificação dos formatos deve ser uma decisão explícita, com migração e testes.
+
+## Regras de preservação
+
+- Não alterar o texto original ao traduzir.
+- Preservar exatamente IDs, marcadores de controle, variáveis e quebras de linha até que seu significado seja confirmado.
+- Não presumir que `∠` seja uma quebra de linha simples; sua semântica ainda está em investigação.
+- Usar `null` para limites desconhecidos; não transformar estimativas em regras.
+- Não usar um ID criado pelo toolkit como substituto de um identificador interno do jogo.
+- Antes de importação/reconstrução, definir serialização determinística e testes de ida e volta.
+- Catálogos reais extraídos do jogo devem permanecer fora do Git se contiverem material proprietário.

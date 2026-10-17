@@ -82,9 +82,9 @@ Execute a descoberta antes de classificar os recursos ou escolher o catálogo a 
 
 ```powershell
 suikoden-tool text discover `
-    --directory "G:\\SteamLibrary\\steamapps\\common\\Suikoden I and II HD Remaster\\Suikoden I and II HD Remaster_Data\\StreamingAssets\\aa\\StandaloneWindows64" `
-    --output work\\bundle_analysis\\text_discovery.json `
-    --tool ".\\tools\\UnityDataTools\\UnityDataTool.exe"
+    --directory "G:\SteamLibrary\steamapps\common\Suikoden I and II HD Remaster\Suikoden I and II HD Remaster_Data\StreamingAssets\aa\StandaloneWindows64" `
+    --output work\bundle_analysis\text_discovery.json `
+    --tool ".\tools\UnityDataTools\UnityDataTool.exe"
 ```
 
 O relatório registra tamanho e SHA-256 de cada bundle, objetos TextAsset, nome, quantidade de entradas `textList` e até oito amostras. Erros por bundle são registrados no relatório para permitir que a inspeção continue. A descoberta não modifica arquivos do jogo.

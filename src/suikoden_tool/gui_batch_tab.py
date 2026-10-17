@@ -359,6 +359,19 @@ class TranslationBatchTab:
             ):
                 return
         destination.mkdir(parents=True, exist_ok=True)
+        # Ao dividir novamente, remover lotes antigos que sobraram de uma execução
+        # anterior maior. A confirmação acima protege contra exclusão inesperada.
+        try:
+            for stale_batch in destination.glob("lote_*.json"):
+                if stale_batch.is_file():
+                    stale_batch.unlink()
+        except OSError as exc:
+            messagebox.showerror(
+                "Falha ao preparar pasta de lotes",
+                f"Não foi possível remover lotes antigos em {destination}:\n{exc}",
+                parent=self.parent,
+            )
+            return
 
         manifest: dict[str, Any] = {
             "source_file": self.source_path.name,

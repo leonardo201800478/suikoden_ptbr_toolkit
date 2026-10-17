@@ -251,7 +251,6 @@ class TranslationApp:
             selectbackground="#484064",
         )
         self.translation_text.grid(row=5, column=0, sticky="nsew")
-        self.translation_text.tag_configure("over_limit", background="#5a252d", foreground="#ffffff")
         self.translation_text.bind("<<Modified>>", self._on_translation_modified)
         right.rowconfigure(5, weight=1)
 
@@ -855,22 +854,11 @@ class TranslationApp:
                 self.message_var.set("Alterações não salvas.")
 
     def _update_translation_counter(self) -> None:
-        """Atualiza a contagem e destaca visualmente as linhas acima de 66 caracteres."""
+        """Atualiza em tempo real a contagem por linha da tradução."""
         visible_text = self.translation_text.get("1.0", "end-1c")
         source_text = self._lines_to_markers(visible_text)
         lengths = self._dialogue_line_lengths(source_text)
         over_limit = [(line_number, count) for line_number, count in lengths if count > 66]
-
-        self.translation_text.tag_remove("over_limit", "1.0", "end")
-        # A representação visual insere linhas físicas após ∠ e duas após ∨.
-        # Destacar linhas lógicas excedidas sem alterar o conteúdo do widget.
-        logical_line = 1
-        for line_number, count in lengths:
-            if count > 66:
-                index = f"{logical_line}.0"
-                end_index = f"{logical_line}.end"
-                self.translation_text.tag_add("over_limit", index, end_index)
-            logical_line += 1
 
         if over_limit:
             details = ", ".join(f"L{line}: {count}/66" for line, count in over_limit)

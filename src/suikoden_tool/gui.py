@@ -593,40 +593,50 @@ class TranslationApp:
         self.game_directory_status.configure(text=detail)
 
     def choose_textasset_dumps(self) -> None:
-        """Converte dumps para JSON validado em output/json_convertidos."""
+        """Converte dumps TextAsset em JSONs validados numa pasta separada."""
         filenames = filedialog.askopenfilenames(
-            title="Selecionar os seis dumps TextAsset (.txt)",
+            title="Selecionar dumps TextAsset (.txt)",
             filetypes=(("Dumps TextAsset", "*.txt"), ("Todos os arquivos", "*.*")),
         )
         if not filenames:
             return
         output_dir = Path.cwd() / "output" / "json_convertidos"
-        overwrite = messagebox.askyesno(
+        if not messagebox.askyesno(
             "Substituir JSON existentes?",
-            f"Os arquivos JSON serão organizados em:\\n{output_dir}\\n\\n"
-            "Se já houver um JSON com o mesmo nome, ele será substituído. Continuar?",
+            f"Saídas: {output_dir}\n\nArquivos JSON existentes com o mesmo nome serão substituídos. Continuar?",
             parent=self.root,
-        )
-        if not overwrite:
+        ):
             return
         try:
-            results = convert_textasset_batch([Path(name) for name in filenames], output_dir, overwrite=True)
-        except (OSError, ValueError) as exc:
-            messagebox.showerror(
-                "Conversão interrompida",
-                f"{exc}\\n\\nOs dumps originais não foram alterados.",
-                parent=self.root,
+            batch = convert_textasset_batch(
+                [Path(name) for name in filenames], output_dir, overwrite=True
             )
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Conversão interrompida", str(exc), parent=self.root)
             return
-        summary = "\\n".join(
+
+        errors: list[dict[str, str]] = []
+        results: list[dict[str, Any]] = []
+        for item in batch:
+            if "batch_errors" in item:
+                errors.extend(item["batch_errors"])
+            else:
+                results.append(item)
+
+        lines = [
             f"{Path(item['source']).name} → {Path(item['output']).relative_to(output_dir).as_posix()} "
             f"({item['entries']} entradas)"
             for item in results
-        )
+        ]
+        if errors:
+            lines.append("\nArquivos que falharam:")
+            lines.extend(f"{Path(item['source']).name}: {item['error']}" for item in errors)
+        title = "Conversão concluída" if not errors else "Conversão parcial"
         messagebox.showinfo(
-            "Conversão concluída",
-            f"Arquivos JSON validados: {len(results)}\\nPasta: {output_dir}\\n\\n{summary}\\n\\n"
-            "Os arquivos .txt originais foram preservados.",
+            title,
+            f"JSONs válidos criados/substituídos: {len(results)}\nFalhas: {len(errors)}\n"
+            f"Pasta: {output_dir}\n\n" + "\n".join(lines) +
+            "\n\nOs dumps .txt originais foram preservados.",
             parent=self.root,
         )
 

@@ -95,13 +95,13 @@ def test_extract_requires_asset_name_when_multiple_json_textassets_exist(tmp_pat
 
 def test_dump_textasset_fields_preserves_trailing_whitespace_and_newlines():
     dump = (
-        "ID: 42 (ClassID: 49) TextAsset\\r\\n"
-        "  m_Name (string) text_asset  \\r\\n"
-        "  m_Script (string) {\\\"textList\\\":[{\\\"id\\\":1,\\\"text\\\":\\\"A∠B\\\"}]}\\r\\n\\r\\n"
+        "ID: 42 (ClassID: 49) TextAsset\r\n"
+        "  m_Name (string) text_asset  \r\n"
+        "  m_Script (string) {\"textList\":[{\"id\":1,\"text\":\"A∠B\"}]}\r\n\r\n"
     )
 
     name, script = _dump_textasset_fields(dump)
 
     assert name == "text_asset  "
-    assert script.endswith("\\r\\n\\r\\n")
+    assert script.endswith("\r\n\r\n")
     assert "∠" in script

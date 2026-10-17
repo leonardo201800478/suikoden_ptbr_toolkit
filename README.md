@@ -58,7 +58,7 @@ Os JSONs preparados não são arquivos para importar diretamente no UABEA; são 
 
 ## Divisão de arquivos em lotes
 
-A guia **Lotes de tradução** divide JSONs `textList` em arquivos menores, preservando os IDs originais. O padrão é 100 entradas por lote, configurável entre 1 e 200. Os lotes ficam em `lotes_traducao/<nome-integral-do-arquivo-de-origem>/`, separados dos catálogos completos. Consulte [Fluxo de lotes e prompts de tradução](docs/FLUXO_LOTES_E_PROMPTS_TRADUCAO.md) para os procedimentos, prompts de tradução e auditoria por ID. A interface também oferece o botão **Unificar lotes traduzidos…**, que confere os IDs, bloqueia lotes incompletos ou duplicados e reconstrói o JSON na ordem original substituindo apenas `text`.
+A guia **Lotes de tradução** divide JSONs `textList` em arquivos menores, preservando os IDs originais. O padrão é 100 entradas por lote, configurável entre 1 e 200. Os lotes ficam em `lotes_traducao/<nome-integral-do-arquivo-de-origem>/`, separados dos catálogos completos. Consulte [Fluxo de lotes e prompts de tradução](docs/FLUXO_LOTES_E_PROMPTS_TRADUCAO.md) para os procedimentos, o **prompt principal atualizado**, as regras de fidelidade e auditoria por ID. A interface também oferece o botão **Unificar lotes traduzidos…**, que confere os IDs, bloqueia lotes incompletos ou duplicados e reconstrói o JSON na ordem original substituindo apenas `text`.
 
 ## Limite de caracteres nas caixas de diálogo
 

@@ -464,7 +464,7 @@ class TranslationApp:
             try:
                 tab = ttk.Frame(self.notebook)
                 ResourceCatalogTab(tab, catalog_path, asset_name)
-                label = f"{asset_name} ({count})"
+                label = f"{_bundle.stem[:8]} · {asset_name} ({count})"
                 self.notebook.add(tab, text=label)
             except (OSError, ValueError) as exc:
                 errors.append(f"{catalog_path.name}: não foi possível abrir a guia: {exc}")

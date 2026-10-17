@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -56,7 +55,7 @@ def _load_textasset_payload(script: str) -> Any:
         raise original_error
 
 
-def import_dump_to_catalog(dump_path: Path, output_path: Path | None = None) -> dict[str, Any]:
+def import_dump_to_catalog(\n    dump_path: Path, output_path: Path | None = None, *, overwrite: bool = False\n) -> dict[str, Any]:
     """Lê um dump UnityDataTool/UABEA e cria um catálogo JSON editável.
 
     O dump fonte permanece intacto. Cada arquivo gera seu próprio catálogo, evitando
@@ -118,10 +117,10 @@ def import_dump_to_catalog(dump_path: Path, output_path: Path | None = None) -> 
     destination = Path(output_path).expanduser().resolve() if output_path else dump_path.with_suffix(".catalog.json")
     if destination == dump_path:
         raise ValueError("O catálogo não pode sobrescrever o dump original.")
-    if destination.exists():
+    if destination.exists() and not overwrite:
         raise FileExistsError(
             f"O catálogo já existe e não será sobrescrito: {destination}. "
-            "Escolha outro destino ou mova o catálogo existente."
+            "Escolha outro destino ou habilite a substituição."
         )
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f".{destination.name}.tmp")

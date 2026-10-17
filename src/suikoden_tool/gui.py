@@ -25,6 +25,7 @@ from suikoden_tool.gui_service import (
 )
 from suikoden_tool.text_catalog import export_text_catalog
 from suikoden_tool.text_discovery import discover_text_assets
+from suikoden_tool.textasset_dump_export import export_textasset_dumps
 from suikoden_tool.unity_text_extractor import extract_textasset_json, resolve_unity_data_tool
 
 BG = "#17191f"
@@ -305,6 +306,7 @@ class TranslationApp:
         actions.grid(row=3, column=0, sticky="ew", pady=(0, 10))
         ttk.Button(actions, text="Localizar os 4 bundles", command=self._locate_target_bundles).pack(side="left")
         ttk.Button(actions, text="Extrair catálogos", style="Accent.TButton", command=self._start_extraction).pack(side="left", padx=8)
+        ttk.Button(actions, text="Exportar dumps TextAsset (UABEA)", command=self._start_dump_export).pack(side="left", padx=8)
         ttk.Button(actions, text="Reconstruir e instalar no jogo", command=self._rebuild_bundles).pack(side="left")
         self.extraction_files = tk.StringVar(value="Informe/aplique a pasta do jogo para localizar os bundles.")
         ttk.Label(frame, textvariable=self.extraction_files, wraplength=1100).grid(row=4, column=0, sticky="ew", pady=(0, 10))
@@ -343,6 +345,67 @@ class TranslationApp:
         self.extraction_files.set("\n".join(details) if details else f"Nenhum bundle encontrado em: {assets_dir}")
         self.extraction_status.set(f"{len(found)}/4 bundles encontrados." if missing else "4/4 bundles encontrados. Pronto para extrair.")
         return self.selected_bundles
+
+    def _start_dump_export(self) -> None:
+        """Exporta todos os TextAssets encontrados nos bundles selecionados, mesmo sem JSON válido."""
+        bundles = self._locate_target_bundles()
+        if not bundles:
+            messagebox.showwarning(
+                "Bundles não encontrados",
+                "Configure a pasta do jogo e localize os bundles antes de exportar.",
+                parent=self.root,
+            )
+            return
+        tool = Path(__file__).resolve().parents[2] / "tools" / "UnityDataTools" / "UnityDataTool.exe"
+        try:
+            executable = resolve_unity_data_tool(tool) if tool.is_file() else resolve_unity_data_tool()
+        except ValueError as exc:
+            messagebox.showerror("UnityDataTool", str(exc), parent=self.root)
+            return
+        output_dir = Path(__file__).resolve().parents[2] / "work" / "bundle_analysis" / "uabea_dumps"
+        self.extraction_status.set("Exportando dumps brutos de TextAsset. Os bundles originais não serão alterados.")
+        self.extraction_log.delete("1.0", "end")
+        threading.Thread(
+            target=self._dump_export_worker,
+            args=(bundles, executable, output_dir),
+            daemon=True,
+        ).start()
+
+    def _dump_export_worker(self, bundles: tuple[Path, ...], executable: Path, output_dir: Path) -> None:
+        try:
+            report = export_textasset_dumps(bundles, executable, output_dir)
+        except (OSError, ValueError) as exc:
+            self.root.after(0, lambda msg=str(exc): self._finish_dump_export(None, msg))
+            return
+        self.root.after(0, lambda result=report: self._finish_dump_export(result, None))
+
+    def _finish_dump_export(self, report: dict[str, Any] | None, error: str | None) -> None:
+        if error:
+            self.extraction_status.set("Falha na exportação de dumps.")
+            self._append_extraction_log("ERRO: " + error)
+            messagebox.showerror("Exportação TextAsset", error, parent=self.root)
+            return
+        assert report is not None
+        self._append_extraction_log(f"Dumps exportados: {report['exported_count']}")
+        self._append_extraction_log(f"Pasta: {report['output_dir']}")
+        for item in report["exported"]:
+            self._append_extraction_log(
+                f"OK: {item['bundle']} | {item['asset_name']} | ID {item['object_id']} "
+                f"({item['bytes']:,} bytes) → {Path(item['path']).name}"
+            )
+        for item in report["errors"]:
+            self._append_extraction_log("AVISO: " + item)
+        self.extraction_status.set(
+            f"Exportação concluída: {report['exported_count']} dump(s); "
+            f"{len(report['errors'])} aviso(s)."
+        )
+        messagebox.showinfo(
+            "Exportação TextAsset",
+            f"{report['exported_count']} dump(s) exportados para:\n{report['output_dir']}\n\n"
+            "Os arquivos preservam o dump completo para usar no UABEA (Import Dump). "
+            "Nenhum bundle original foi alterado.",
+            parent=self.root,
+        )
 
     def _rebuild_bundles(self) -> None:
         messagebox.showwarning("Reconstrução ainda não implementada", "A extração está disponível, mas a reinserção/reconstrução de bundles Unity Addressables ainda não possui um motor validado. Nenhum arquivo foi alterado. Precisamos implementar e testar a reinserção em cópias, incluindo metadados e CRC, antes de instalar arquivos reconstruídos.", parent=self.root)

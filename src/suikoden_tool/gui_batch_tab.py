@@ -105,6 +105,11 @@ class TranslationBatchTab:
                     f"Entradas inválidas (posição iniciada em 1): {', '.join(str(i + 1) for i in invalid[:20])}."
                 )
             ids = [entry["id"] for entry in entries]
+            if any(
+                isinstance(entry_id, bool) or not isinstance(entry_id, (int, str))
+                for entry_id in ids
+            ):
+                raise ValueError("Cada ID deve ser um número inteiro ou uma string.")
             duplicate_ids = []
             seen: set[tuple[type, Any]] = set()
             for entry_id in ids:

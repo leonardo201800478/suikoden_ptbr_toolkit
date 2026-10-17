@@ -22,7 +22,8 @@ Construir em Python uma ferramenta prática, eficiente e segura para investigar,
 - `inspect`: inspeção não destrutiva de cabeçalho UnityFS e SHA-256.
 - `inventory`: inventário recursivo de bundles.
 - `template`: criação de um JSON inicial de tradução.
-- `text export`: cria ou mescla um catálogo de JSON já extraído com `textList`; preserva traduções compatíveis, marca mudanças de origem para revisão e preserva IDs removidos como `orphaned`.
+- `text extract`: integração experimental com UnityDataTool; localiza objetos `TextAsset`, lê `m_Script` e grava apenas JSON com lista `textList`. Requer `--asset-name` quando há múltiplos recursos compatíveis e não sobrescreve saída sem `--force`.
+- `text export`: cria ou mescla um catálogo de JSON extraído com `textList`; preserva traduções compatíveis, marca mudanças de origem para revisão e preserva IDs removidos como `orphaned`.
 - `text validate`: verifica estrutura, IDs duplicados, campos, status e traduções pendentes; emite avisos conservadores se a quantidade de `∠` ou de quebras de linha diferir entre original e tradução preenchida; com `--source`, compara IDs e textos contra uma extração atual.
 - `text stats`: conta entradas por status e percentual concluído sem alterar o catálogo.
 - `text batch-export`: exporta entradas `pending` e, por padrão, `needs_review` para CSV UTF-8 com BOM, compatível com Excel; limite padrão de 100.
@@ -39,7 +40,7 @@ Exemplo de entrada para `text export`:
 }
 ```
 
-Os comandos de texto não extraem diretamente objetos de dentro dos bundles; operam sobre JSON previamente extraído. A mesclagem segura de catálogos está implementada. Quando a origem muda, a tradução existente é mantida, `previous_original` é preservado, `source_changed` fica verdadeiro e o status passa a `needs_review`. IDs removidos da extração são mantidos como `orphaned`.
+O comando `text extract` tenta extrair um `TextAsset` diretamente do bundle usando UnityDataTool configurado por `--tool`, `UNITY_DATA_TOOL`, `PATH` ou `tools/UnityDataTools/UnityDataTool.exe`. A integração ainda precisa ser testada localmente contra UnityDataTool 2.4.0 e os bundles reais; não afirmar que a extração está validada até o usuário executar os testes. `text export` opera sobre o JSON extraído e a mesclagem segura de catálogos está implementada. Quando a origem muda, a tradução existente é mantida, `previous_original` é preservado, `source_changed` fica verdadeiro e o status passa a `needs_review`. IDs removidos da extração são mantidos como `orphaned`.
 
 ## Evidência de engenharia reversa
 

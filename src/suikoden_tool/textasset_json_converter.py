@@ -5,6 +5,22 @@ import json
 from pathlib import Path
 from typing import Any
 
+# Marcadores confirmados pelo usuário: controles U+0018..U+001B devem ser
+# visíveis no catálogo. Os símbolos de glifo (∠, ∨, ♂, ㈱, ■, ☆, ★, ▲, ▼)
+# são preservados literalmente; U+FFFD em text_add_en também é conteúdo original.
+VISIBLE_CONTROL_MARKERS = {code: f"⟦CTRL-U+{code:04X}⟧" for code in range(0x18, 0x1C)}
+
+
+def _make_controls_visible(value: Any) -> Any:
+    """Representa controles confirmados como marcadores sem perder a identidade."""
+    if isinstance(value, str):
+        return "".join(VISIBLE_CONTROL_MARKERS.get(ord(char), char) for char in value)
+    if isinstance(value, list):
+        return [_make_controls_visible(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _make_controls_visible(item) for key, item in value.items()}
+    return value
+
 from suikoden_tool.text_extractor import _loads_textasset_json
 from suikoden_tool.unity_text_extractor import _dump_textasset_fields
 
@@ -45,6 +61,7 @@ def _read_payload(source: Path) -> tuple[Any, str, str]:
         ) from exc
 
     if isinstance(payload, dict) and "textList" in payload:
+        payload = _make_controls_visible(payload)
         text_list = payload["textList"]
         if not isinstance(text_list, list):
             raise ValueError(f"{source.name}: textList não é uma lista.")

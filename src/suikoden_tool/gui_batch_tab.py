@@ -173,31 +173,73 @@ class TranslationBatchTab:
         if not batch_dirname:
             return
         batch_dir = Path(batch_dirname)
-        # Os lotes podem estar dentro de subpastas (por exemplo, a pasta criada
-        # automaticamente com o nome completo do JSON de origem). Pesquisar
-        # recursivamente evita exigir que o usuário encontre o nível exato.
-        batch_paths = sorted(
-            path for path in batch_dir.rglob("lote_*.json")
-            if path.is_file() and path.name != "manifest_lotes.json"
-        )
+        # Preferir os lotes diretamente na pasta escolhida. Se ela for uma pasta
+        # pai, localizar o conjunto correto pelo manifesto criado na divisão.
+        def batches_in(folder: Path) -> list[Path]:
+            return sorted(
+                path for path in folder.glob("lote_*.json")
+                if path.is_file() and path.name != "manifest_lotes.json"
+            )
+
+        batch_paths = batches_in(batch_dir)
         if not batch_paths:
-            examples = sorted(
-                path.relative_to(batch_dir).as_posix()
-                for path in batch_dir.rglob("*.json")
-                if path.is_file()
-            )
-            detail = (
-                "Foram encontrados arquivos JSON, mas nenhum corresponde ao padrão lote_*.json.\n"
-                "Confira se os arquivos traduzidos mantêm nomes como lote_001.json."
-                if examples else
-                "Nenhum arquivo JSON foi encontrado nessa pasta ou em suas subpastas."
-            )
-            messagebox.showerror(
-                "Lotes não encontrados",
-                f"Pasta selecionada:\n{batch_dir}\n\n{detail}",
-                parent=self.parent,
-            )
-            return
+            candidates: list[tuple[Path, list[Path]]] = []
+            for manifest_path in batch_dir.rglob("manifest_lotes.json"):
+                try:
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+                except (OSError, UnicodeError, json.JSONDecodeError):
+                    continue
+                if (
+                    manifest.get("source_file") == source_path.name
+                    and manifest.get("source_entry_count") == len(source_entries)
+                ):
+                    folder = manifest_path.parent
+                    paths = batches_in(folder)
+                    if paths:
+                        candidates.append((folder, paths))
+
+            # Manifesto ausente (por exemplo, se os lotes foram movidos): aceitar
+            # somente um único conjunto inequívoco, nunca misturar pastas distintas.
+            if not candidates:
+                folders: dict[Path, list[Path]] = {}
+                for path in batch_dir.rglob("lote_*.json"):
+                    if path.is_file() and path.name != "manifest_lotes.json":
+                        folders.setdefault(path.parent, []).append(path)
+                folders = {folder: sorted(paths) for folder, paths in folders.items()}
+                if len(folders) == 1:
+                    candidates = list(folders.items())
+
+            if len(candidates) == 1:
+                batch_dir, batch_paths = candidates[0]
+            elif len(candidates) > 1:
+                folders_text = "\n".join(str(folder) for folder, _ in candidates[:12])
+                messagebox.showerror(
+                    "Mais de um conjunto de lotes",
+                    "Foram encontrados vários conjuntos compatíveis com o JSON original. "
+                    "Selecione diretamente a pasta de um único conjunto de lotes:\n\n"
+                    + folders_text,
+                    parent=self.parent,
+                )
+                return
+            else:
+                examples = sorted(
+                    path.relative_to(batch_dir).as_posix()
+                    for path in batch_dir.rglob("*.json")
+                    if path.is_file()
+                )
+                detail = (
+                    "Há arquivos JSON, mas não foi possível identificar um conjunto de lotes "
+                    "compatível com o nome e a quantidade de entradas do original."
+                    if examples else
+                    "Nenhum arquivo JSON foi encontrado nessa pasta ou em suas subpastas."
+                )
+                messagebox.showerror(
+                    "Lotes não encontrados",
+                    f"JSON original: {source_path.name} ({len(source_entries)} entradas)\n"
+                    f"Pasta selecionada: {batch_dir}\n\n{detail}",
+                    parent=self.parent,
+                )
+                return
 
         translated_by_id: dict[tuple[type, Any], str] = {}
         errors: list[str] = []

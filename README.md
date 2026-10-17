@@ -92,6 +92,21 @@ suikoden-tool text stats --input work\\bundle_analysis\\catalogo_pt_br.json
 
 `validate` retorna erros estruturais e avisos para traduções pendentes, mudanças de texto e divergências com a fonte. `stats` conta `pending`, `translated`, `reviewed`, `needs_review` e `orphaned` sem alterar o arquivo.
 
+### Traduzir em lotes com CSV/Excel
+
+```powershell
+# Exporta até 100 entradas pendentes e que precisam de revisão
+suikoden-tool text batch-export --input work\\bundle_analysis\\catalogo_pt_br.json --output work\\bundle_analysis\\lote_001.csv --limit 100
+
+# Para exportar somente entradas pending
+suikoden-tool text batch-export --input work\\bundle_analysis\\catalogo_pt_br.json --output work\\bundle_analysis\\lote_001.csv --limit 100 --pending-only
+
+# Depois de preencher a coluna translation no Excel, importe o lote
+suikoden-tool text batch-import --catalog work\\bundle_analysis\\catalogo_pt_br.json --input work\\bundle_analysis\\lote_001.csv
+```
+
+O CSV usa UTF-8 com BOM para facilitar a abertura no Excel. Não edite as colunas `id`, `id_type` e `original`. A importação rejeita IDs duplicados, IDs desconhecidos e originais divergentes antes de gravar qualquer alteração. Traduções vazias são ignoradas; o texto original nunca é substituído. Entradas `needs_review` permanecem nesse estado até revisão explícita. Faça uma cópia de segurança do catálogo antes de importar lotes.
+
 ### Testes e ajuda
 
 ```powershell

@@ -57,3 +57,32 @@ def test_batch_uses_catalog_and_license_subfolders_and_overwrites(tmp_path):
     assert len(results) == 2
     assert json.loads((output / "catalogos" / "text_gsd2_en.json").read_text())["textList"][0]["id"] == 7
     assert (output / "licencas" / "License_xb.json").is_file()
+
+
+
+def test_preserves_confirmed_suikoden_glyphs_and_replacement_character(tmp_path):
+    source = tmp_path / "text_add_en-CAB-abc-1.txt"
+    original = {
+        "textList": [
+            {"id": 1, "text": "Line∠next∨page ♂㈱■☆★▲▼"},
+            {"id": 2, "text": "Replacement � is original content"},
+        ]
+    }
+    source.write_text(json.dumps(original, ensure_ascii=False), encoding="utf-8")
+    result = convert_textasset_dump(source, tmp_path / "out" / "text_add_en.json")
+    payload = json.loads(Path(result["output"]).read_text(encoding="utf-8"))
+    assert payload["textList"][0]["text"] == original["textList"][0]["text"]
+    assert payload["textList"][1]["text"] == original["textList"][1]["text"]
+
+
+def test_converts_confirmed_control_codes_to_visible_markers(tmp_path):
+    source = tmp_path / "text_add_en-CAB-abc-1.txt"
+    # Raw U+0018..U+001B are escaped in JSON source, then represented visibly
+    # in the translation catalog to avoid invisible controls in translation UI.
+    raw = json.dumps({"textList": [{"id": 1, "text": "A\\u0018B\\u0019C\\u001aD\\u001bE"}]})
+    source.write_text(raw, encoding="utf-8")
+    result = convert_textasset_dump(source, tmp_path / "out" / "text_add_en.json")
+    payload = json.loads(Path(result["output"]).read_text(encoding="utf-8"))
+    assert payload["textList"][0]["text"] == (
+        "A⟦CTRL-U+0018⟧B⟦CTRL-U+0019⟧C⟦CTRL-U+001A⟧D⟦CTRL-U+001B⟧E"
+    )

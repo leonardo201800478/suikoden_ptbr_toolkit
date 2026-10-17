@@ -321,7 +321,7 @@ def test_validate_accepts_matching_known_marker_and_line_break_counts():
         "entries": [
             {
                 "id": 1,
-                "original": "First∠Second\\nThird",
+                "original": "First∠Second\nThird",
                 "translation": "Primeiro∠Segundo\nTerceiro",
                 "status": "translated",
             }

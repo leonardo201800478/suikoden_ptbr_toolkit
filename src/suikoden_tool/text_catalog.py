@@ -35,20 +35,20 @@ def _write_json(data: object, path: Path) -> None:
 def _source_entries(source: Path) -> tuple[list[dict[str, Any]], str]:
     data = _read_json(source)
     if not isinstance(data, dict) or not isinstance(data.get("textList"), list):
-        raise ValueError("Formato inválido: esperado um objeto JSON com uma lista 'textList'.")
+        raise ValueError("Formato inválido: esperado um objeto JSON com uma lista 'textList'.")  # noqa: TRY004
 
     entries: list[dict[str, Any]] = []
     seen_ids: set[tuple[type, object]] = set()
     for index, item in enumerate(data["textList"]):
         if not isinstance(item, dict):
-            raise ValueError(f"Entrada {index} não é um objeto JSON.")
+            raise ValueError(f"Entrada {index} não é um objeto JSON.")  # noqa: TRY004
         if "id" not in item or "text" not in item:
             raise ValueError(f"Entrada {index} precisa conter 'id' e 'text'.")
         entry_id = item["id"]
         if isinstance(entry_id, bool) or not isinstance(entry_id, (str, int)):
-            raise ValueError(f"ID da entrada {index} precisa ser string ou inteiro.")
+            raise ValueError(f"ID da entrada {index} precisa ser string ou inteiro.")  # noqa: TRY004
         if not isinstance(item["text"], str):
-            raise ValueError(f"O texto da entrada {index} precisa ser uma string.")
+            raise ValueError(f"O texto da entrada {index} precisa ser uma string.")  # noqa: TRY004
         key = (type(entry_id), entry_id)
         if key in seen_ids:
             raise ValueError(f"ID duplicado no catálogo de origem: {entry_id!r}.")
@@ -60,16 +60,16 @@ def _source_entries(source: Path) -> tuple[list[dict[str, Any]], str]:
 def _catalog_index(catalog: dict[str, Any]) -> dict[tuple[type, object], dict[str, Any]]:
     entries = catalog.get("entries")
     if not isinstance(entries, list):
-        raise ValueError("Catálogo inválido: 'entries' precisa ser uma lista.")
+        raise ValueError("Catálogo inválido: 'entries' precisa ser uma lista.")  # noqa: TRY004
     indexed: dict[tuple[type, object], dict[str, Any]] = {}
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
-            raise ValueError(f"Entrada {index} do catálogo não é um objeto.")
+            raise ValueError(f"Entrada {index} do catálogo não é um objeto.")  # noqa: TRY004
         if "id" not in entry:
             raise ValueError(f"Entrada {index} do catálogo não contém 'id'.")
         entry_id = entry["id"]
         if isinstance(entry_id, bool) or not isinstance(entry_id, (str, int)):
-            raise ValueError(f"ID da entrada {index} do catálogo precisa ser string ou inteiro.")
+            raise ValueError(f"ID da entrada {index} do catálogo precisa ser string ou inteiro.")  # noqa: TRY004
         key = (type(entry_id), entry_id)
         if key in indexed:
             raise ValueError(f"ID duplicado no catálogo existente: {entry_id!r}.")
@@ -199,7 +199,15 @@ def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]
     errors: list[str] = []
     warnings: list[str] = []
     if not isinstance(catalog, dict):
-        return {"valid": False, "errors": ["A raiz do catálogo precisa ser um objeto."], "warnings": []}
+        errors = ["A raiz do catálogo precisa ser um objeto."]
+        return {
+            "valid": False,
+            "entry_count": 0,
+            "error_count": len(errors),
+            "warning_count": 0,
+            "errors": errors,
+            "warnings": [],
+        }
 
     if catalog.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"schema_version precisa ser {SCHEMA_VERSION}.")
@@ -283,7 +291,7 @@ def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]
 def catalog_stats(catalog: Any) -> dict[str, Any]:
     """Conta entradas pendentes, traduzidas e revisadas sem modificar o catálogo."""
     if not isinstance(catalog, dict) or not isinstance(catalog.get("entries"), list):
-        raise ValueError("Catálogo inválido: esperado objeto JSON com lista 'entries'.")
+        raise ValueError("Catálogo inválido: esperado objeto JSON com lista 'entries'.")  # noqa: TRY004
     counts = {"pending": 0, "translated": 0, "reviewed": 0, "needs_review": 0, "orphaned": 0}
     for index, entry in enumerate(catalog["entries"]):
         if not isinstance(entry, dict):

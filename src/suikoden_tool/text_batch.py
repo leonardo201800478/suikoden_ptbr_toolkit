@@ -115,7 +115,12 @@ def import_translation_batch(catalog_path: Path, input_path: Path) -> dict[str, 
         id_type = row.get("id_type")
         original = row.get("original")
         translation = row.get("translation")
-        if None in (id_text, id_type, original, translation):
+        if (
+            not isinstance(id_text, str)
+            or not isinstance(id_type, str)
+            or not isinstance(original, str)
+            or not isinstance(translation, str)
+        ):
             raise ValueError(f"Linha {line_number}: contém coluna ou valor ausente.")
         if id_type == "int":
             if not re.fullmatch(r"-?\d+", id_text):

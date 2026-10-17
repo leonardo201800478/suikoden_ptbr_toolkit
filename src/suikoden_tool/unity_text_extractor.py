@@ -142,7 +142,7 @@ def extract_textasset_json(
             dump = _run_tool(tool, dump_args, timeout)
             name, script = _dump_textasset_fields(dump)
             payload = json.loads(script)
-        except (ValueError, json.JSONDecodeError) as exc:
+        except ValueError as exc:
             failures.append(f"ID {object_id}: {exc}")
             continue
         if isinstance(payload, dict) and isinstance(payload.get("textList"), list):

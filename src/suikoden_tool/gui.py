@@ -251,6 +251,7 @@ class TranslationApp:
             selectbackground="#484064",
         )
         self.translation_text.grid(row=5, column=0, sticky="nsew")
+        self.translation_text.tag_configure("over_limit", foreground="#ff6b75")
         self.translation_text.bind("<<Modified>>", self._on_translation_modified)
         right.rowconfigure(5, weight=1)
 
@@ -854,21 +855,38 @@ class TranslationApp:
                 self.message_var.set("Alterações não salvas.")
 
     def _update_translation_counter(self) -> None:
-        """Atualiza em tempo real a contagem por linha da tradução."""
+        """Atualiza a contagem e pinta de vermelho o texto das linhas excedentes."""
+        import re
+
         visible_text = self.translation_text.get("1.0", "end-1c")
         source_text = self._lines_to_markers(visible_text)
         lengths = self._dialogue_line_lengths(source_text)
-        over_limit = [(line_number, count) for line_number, count in lengths if count > 66]
+        over_limit = {line for line, count in lengths if count > 66}
+
+        self.translation_text.tag_remove("over_limit", "1.0", "end")
+        pieces = re.split(r"([∠∨])", source_text)
+        logical_line = 1
+        physical_line = 1
+        for index, piece in enumerate(pieces):
+            if index % 2 == 0:
+                if logical_line in over_limit:
+                    self.translation_text.tag_add(
+                        "over_limit", f"{physical_line}.0", f"{physical_line}.end"
+                    )
+                logical_line += 1
+            elif piece == "∠":
+                physical_line += 1
+            elif piece == "∨":
+                physical_line += 2
 
         if over_limit:
-            details = ", ".join(f"L{line}: {count}/66" for line, count in over_limit)
+            details = ", ".join(f"L{line}: {count}/66" for line, count in lengths if count > 66)
             self.translation_counter.configure(foreground="#ff7b86")
             self.translation_counter_var.set(f"⚠ Linhas acima do limite: {details}")
         else:
             self.translation_counter.configure(foreground="#83d6a5")
-            total_lines = len(lengths)
             self.translation_counter_var.set(
-                f"✓ Todas as {total_lines} linhas dentro do limite de 66 caracteres."
+                f"✓ Todas as {len(lengths)} linhas dentro do limite de 66 caracteres."
             )
 
     def _current_entry(self) -> dict[str, Any] | None:

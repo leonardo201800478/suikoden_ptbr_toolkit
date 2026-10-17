@@ -72,11 +72,12 @@ def _dump_textasset_fields(dump: str) -> tuple[str, str]:
     if name_match is None or script_match is None:
         raise ValueError("O dump não contém os campos m_Name e m_Script esperados.")
 
-    name = name_match.group(1).strip()
+    # Não aplicar strip/rstrip ao conteúdo: espaços, CR/LF e caracteres de controle
+    # podem fazer parte do TextAsset. O dump bruto deve ser preservado; parsers como
+    # json.loads aceitam whitespace externo quando o conteúdo é JSON.
+    name = name_match.group(1)
     script_start = script_match.end()
-    # TextAsset usa m_Script como último campo. Remova apenas a quebra final do dump,
-    # sem normalizar quebras de linha que possam fazer parte do próprio texto.
-    script = dump[script_start:].rstrip("\r\n")
+    script = dump[script_start:]
     if not script:
         raise ValueError(f"TextAsset {name!r} tem m_Script vazio.")
     return name, script

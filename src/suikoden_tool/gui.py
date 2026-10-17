@@ -599,16 +599,25 @@ class TranslationApp:
         )
         if not filenames:
             return
+        overwrite = messagebox.askyesno(
+            "Substituir catálogos existentes?",
+            "Deseja substituir os arquivos .catalog.json já existentes?\\n\\n"
+            "Isso sobrescreverá as traduções que estiverem nesses catálogos. "
+            "Escolha Não para manter os arquivos existentes.",
+            parent=self.root,
+        )
         results: list[dict[str, Any]] = []
         failures: list[str] = []
+        skipped_licenses = 0
         for filename in filenames:
             source_path = Path(filename)
             # Licenças legais não são catálogos de diálogo; manter os dumps sem
             # apresentá-los como falhas da importação de textos traduzíveis.
             if source_path.name.casefold().startswith(("license_xb-", "license_steam-", "license_swps-")):
+                skipped_licenses += 1
                 continue
             try:
-                results.append(import_dump_to_catalog(source_path))
+                results.append(import_dump_to_catalog(source_path, overwrite=overwrite))
             except (OSError, ValueError) as exc:
                 failures.append(f"{source_path.name}: {exc}")
         if results:

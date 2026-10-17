@@ -142,10 +142,9 @@ def export_textasset_dumps(
                 dump = result.stdout
                 name_match = re.search(r"(?m)^\s*m_Name \(string\) (.*)$", dump)
                 asset_name = name_match.group(1).strip() if name_match else f"TextAsset_{object_id}"
-                filename = "__".join((
-                    _safe_name(bundle.stem), _safe_name(Path(entry).stem),
-                    _safe_name(asset_name), str(object_id),
-                )) + ".txt"
+                # UABEA Import Dump expects the original TextAsset name and CAB entry/ID
+                # identity in the filename; do not prepend the source bundle filename.
+                filename = f"{_safe_name(asset_name)}-{_safe_name(Path(entry).stem)}-{object_id}.txt"
                 destination = output_dir / filename
                 if destination.exists() and not force:
                     errors.append(f"{filename}: já existe; exportação interrompida para preservar o arquivo")

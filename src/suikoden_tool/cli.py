@@ -48,13 +48,24 @@ def build_parser() -> argparse.ArgumentParser:
     text_commands = commands.add_parser("text", help="Operações com textos extraídos")
     text_subcommands = text_commands.add_subparsers(dest="text_command", required=True)
 
-    p = text_subcommands.add_parser("extract", help="Extrai JSON textList de um TextAsset via UnityDataTool")
-    p.add_argument("--bundle", required=True, type=Path, help="Bundle UnityFS de entrada (somente leitura)")
+    p = text_subcommands.add_parser(
+        "extract", help="Extrai JSON textList de um TextAsset via UnityDataTool"
+    )
+    p.add_argument(
+        "--bundle", required=True, type=Path, help="Bundle UnityFS de entrada (somente leitura)"
+    )
     p.add_argument("--output", required=True, type=Path, help="JSON extraído de saída")
-    p.add_argument("--tool", type=Path, help="Caminho do UnityDataTool.exe; também pode usar UNITY_DATA_TOOL")
+    p.add_argument(
+        "--tool", type=Path, help="Caminho do UnityDataTool.exe; também pode usar UNITY_DATA_TOOL"
+    )
     p.add_argument("--entry", help="Nome do SerializedFile dentro do bundle, se houver mais de um")
     p.add_argument("--asset-name", help="Nome exato do TextAsset a extrair, se houver vários")
-    p.add_argument("--timeout", type=int, default=120, help="Tempo limite por chamada em segundos (padrão: 120)")
+    p.add_argument(
+        "--timeout",
+        type=int,
+        default=120,
+        help="Tempo limite por chamada em segundos (padrão: 120)",
+    )
     p.add_argument("--force", action="store_true", help="Permite substituir um JSON de saída existente")
 
     p = text_subcommands.add_parser("export", help="Cria ou atualiza catálogo sem perder traduções")

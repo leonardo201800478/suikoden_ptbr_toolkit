@@ -23,7 +23,7 @@ Construir em Python uma ferramenta prática, eficiente e segura para investigar,
 - `inventory`: inventário recursivo de bundles.
 - `template`: criação de um JSON inicial de tradução.
 - `text export`: cria ou mescla um catálogo de JSON já extraído com `textList`; preserva traduções compatíveis, marca mudanças de origem para revisão e preserva IDs removidos como `orphaned`.
-- `text validate`: verifica estrutura, IDs duplicados, campos, status e traduções pendentes; com `--source`, compara IDs e textos contra uma extração atual.
+- `text validate`: verifica estrutura, IDs duplicados, campos, status e traduções pendentes; emite avisos conservadores se a quantidade de `∠` ou de quebras de linha diferir entre original e tradução preenchida; com `--source`, compara IDs e textos contra uma extração atual.
 - `text stats`: conta entradas por status e percentual concluído sem alterar o catálogo.
 - `text batch-export`: exporta entradas `pending` e, por padrão, `needs_review` para CSV UTF-8 com BOM, compatível com Excel; limite padrão de 100.
 - `text batch-import`: importa traduções CSV após validar IDs, tipos de ID e igualdade exata do texto original. Faz todas as validações antes de gravar; células vazias não apagam traduções e entradas `needs_review` continuam exigindo revisão.
@@ -47,7 +47,7 @@ Os comandos de texto não extraem diretamente objetos de dentro dos bundles; ope
 - UnityDataTool 2.4.0 listou um objeto `AssetBundle` e um `TextAsset` chamado `text_add_en`.
 - O objeto contém JSON `textList` com 1.443 entradas, cada uma com `id` e `text`.
 - A checagem encontrou zero IDs duplicados/ausentes e zero textos ausentes; três textos vazios, 27 textos contendo `∠` e uma entrada com quebra de linha.
-- O marcador `∠` precisa ser preservado. Seu significado e regras de serialização ainda não foram confirmados.
+- O marcador `∠` precisa ser preservado. Seu significado e regras de serialização ainda não foram confirmados. A validação agora avisa se a quantidade do marcador ou das quebras de linha divergir na tradução; são avisos heurísticos, não uma interpretação da semântica.
 - Algumas entradas são narrativas, menus e descrições. Não está provado que a tabela inclua todos os diálogos da história nem todos os recursos dos dois jogos.
 - Os arquivos e dumps mencionados acima são locais; não devem ser presumidos presentes no repositório.
 

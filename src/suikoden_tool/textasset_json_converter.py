@@ -38,7 +38,7 @@ def _read_payload(source: Path) -> tuple[Any, str, str]:
             f"U+{ord(char):04X}" for char in script[max(0, position - 8):min(len(script), position + 8)]
         )
         raise ValueError(
-            f"{source.name}: m_Script de {asset_name!r} não pode ser convertido em JSON "
+            f"{source.name}: m_Script de {asset_name!r} não é JSON válido e não pode ser convertido em JSON "
             f"(linha {exc.lineno}, coluna {exc.colno}, posição {position}: {exc.msg}). "
             f"Contexto escapado: {context!r}. Caracteres próximos: {codepoints}. "
             "Nenhum JSON de saída foi gravado; o dump original foi preservado."
@@ -129,9 +129,9 @@ def convert_textasset_batch(
                 log_file.write(json.dumps({"status": "ok", **item}, ensure_ascii=False) + "\n")
         for error in errors:
             log_file.write(json.dumps({"status": "error", **error}, ensure_ascii=False) + "\n")
-    # Mantém retorno dos sucessos e erros estruturados para a GUI/CLI.
-    if errors:
-        results.append({"batch_errors": errors, "log_path": str(log_path)})
-    else:
-        results.append({"log_path": str(log_path)})
+    # Retorna apenas os arquivos processados; o log não é um arquivo convertido.
+    for item in results:
+        item["log_path"] = str(log_path)
+        if errors:
+            item["batch_errors"] = errors
     return results

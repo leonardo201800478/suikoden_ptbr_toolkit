@@ -26,7 +26,7 @@ def test_extract_textasset_json_uses_unitydatatool_and_preserves_unicode(tmp_pat
             return _fake_process(
                 'ID: 42 (ClassID: 49) TextAsset\n'
                 '  m_Name (string) text_add_en\n'
-                '  m_Script (string) {"textList":[{"id":1,"text":"Olá, mundo!"}]}\n'
+                '  m_Script (string) {"textList":[{"id":1,"text":"♂㈱ ♂① ♂② ♂⑩∠Linha∨Próxima☆ＬＶ２ ★☆ ◎1  espaços  ?"}]}\n'
             )
         raise AssertionError(f"Comando inesperado: {command}")
 
@@ -36,7 +36,7 @@ def test_extract_textasset_json_uses_unitydatatool_and_preserves_unicode(tmp_pat
 
     assert result["asset_name"] == "text_add_en"
     assert result["text_count"] == 1
-    assert json.loads(output.read_text(encoding="utf-8"))["textList"][0]["text"] == "Olá, mundo!"
+    assert json.loads(output.read_text(encoding="utf-8"))["textList"][0]["text"] == "♂㈱ ♂① ♂② ♂⑩∠Linha∨Próxima☆ＬＶ２ ★☆ ◎1  espaços  ?"
     assert len(calls) == 2
     assert calls[0][1:3] == ["serialized-file", "objectlist"]
     assert "--stdout" in calls[1]

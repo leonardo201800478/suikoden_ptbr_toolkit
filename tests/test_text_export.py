@@ -297,15 +297,15 @@ def test_validate_warns_when_known_marker_or_line_break_count_changes():
         "entries": [
             {
                 "id": 1,
-                "original": "First∠Second\\nThird",
-                "translation": "Primeiro Segundo\\nTerceiro\\nExtra",
+                "original": "First∠Second\nThird",
+                "translation": "Primeiro Segundo\nTerceiro\nExtra",
                 "status": "translated",
             }
         ],
     }
 
     report = validate_catalog(catalog)
-    warnings = "\\n".join(report["warnings"])
+    warnings = "\n".join(report["warnings"])
 
     assert report["valid"] is True
     assert "quantidade do marcador ∠ difere" in warnings
@@ -322,7 +322,7 @@ def test_validate_accepts_matching_known_marker_and_line_break_counts():
             {
                 "id": 1,
                 "original": "First∠Second\\nThird",
-                "translation": "Primeiro∠Segundo\\nTerceiro",
+                "translation": "Primeiro∠Segundo\nTerceiro",
                 "status": "translated",
             }
         ],

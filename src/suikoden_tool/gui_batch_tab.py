@@ -138,14 +138,104 @@ class TranslationBatchTab:
         self.tree.delete(*self.tree.get_children())
 
     def merge_batches(self) -> None:
-        """Mescla os textos traduzidos nos objetos originais, usando IDs como chave."""
-        source_filename = filedialog.askopenfilename(
-            title="Selecionar JSON original completo",
-            filetypes=(("Arquivos JSON", "*.json"), ("Todos os arquivos", "*.*")),
+        """Unifica lotes escolhendo somente a pasta que os contém."""
+        selected_dirname = filedialog.askdirectory(
+            title="Selecionar pasta dos lotes traduzidos",
+            initialdir=str(self.source_path.parent if self.source_path else Path.home()),
         )
-        if not source_filename:
+        if not selected_dirname:
             return
-        source_path = Path(source_filename)
+        selected_dir = Path(selected_dirname)
+
+        def batches_in(folder: Path) -> list[Path]:
+            return sorted(
+                path for path in folder.glob("lote_*.json")
+                if path.is_file() and path.name != "manifest_lotes.json"
+            )
+
+        # Localiza o manifesto para recuperar o JSON original e identificar
+        # inequivocamente a pasta do conjunto. O usuário não precisa selecionar
+        # o catálogo original separadamente.
+        manifests: list[tuple[Path, dict[str, Any]]] = []
+        for manifest_path in selected_dir.rglob("manifest_lotes.json"):
+            try:
+                manifest_data = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                continue
+            if isinstance(manifest_data, dict) and isinstance(manifest_data.get("source_file"), str):
+                manifests.append((manifest_path, manifest_data))
+
+        selected_manifest: tuple[Path, dict[str, Any]] | None = None
+        direct_batches = batches_in(selected_dir)
+        if direct_batches:
+            # Se a pasta dos lotes foi selecionada diretamente, usar o manifesto
+            # dela quando existir.
+            for item in manifests:
+                if item[0].parent == selected_dir:
+                    selected_manifest = item
+                    break
+            if selected_manifest is None:
+                messagebox.showerror(
+                    "Manifesto não encontrado",
+                    "A pasta contém lotes, mas não contém manifest_lotes.json. "
+                    "Para unificar com segurança, selecione a pasta gerada pela divisão "
+                    "original ou gere novamente os lotes.",
+                    parent=self.parent,
+                )
+                return
+            batch_dir = selected_dir
+            batch_paths = direct_batches
+        else:
+            if len(manifests) != 1:
+                messagebox.showerror(
+                    "Conjunto de lotes não identificado",
+                    "Selecione diretamente a pasta de um único conjunto de lotes. "
+                    "A pasta escolhida deve conter lote_001.json e manifest_lotes.json, "
+                    "ou conter apenas uma subpasta desse conjunto.",
+                    parent=self.parent,
+                )
+                return
+            selected_manifest = manifests[0]
+            batch_dir = selected_manifest[0].parent
+            batch_paths = batches_in(batch_dir)
+            if not batch_paths:
+                messagebox.showerror(
+                    "Lotes não encontrados",
+                    f"O manifesto foi encontrado, mas não há arquivos lote_*.json em:\n{batch_dir}",
+                    parent=self.parent,
+                )
+                return
+
+        manifest_path, manifest = selected_manifest
+        source_file = manifest.get("source_file")
+        source_path_value = manifest.get("source_path")
+        source_path = Path(source_path_value) if isinstance(source_path_value, str) and source_path_value else None
+
+        # Preferir o caminho absoluto registrado no manifesto. Como alternativa,
+        # procurar o arquivo pelo nome junto à pasta escolhida e suas pastas pai.
+        if source_path is None or not source_path.is_file():
+            candidates: list[Path] = []
+            if isinstance(source_file, str) and source_file:
+                for root in (selected_dir, manifest_path.parent, manifest_path.parent.parent):
+                    try:
+                        candidates.extend(p for p in root.rglob(source_file) if p.is_file())
+                    except OSError:
+                        continue
+            unique_candidates = list(dict.fromkeys(p.resolve() for p in candidates))
+            if len(unique_candidates) == 1:
+                source_path = unique_candidates[0]
+            else:
+                messagebox.showerror(
+                    "JSON original não localizado",
+                    "Não foi possível localizar automaticamente o JSON original registrado no manifesto.\n\n"
+                    f"Arquivo esperado: {source_file or '(não informado)'}\n"
+                    f"Caminho registrado: {source_path or '(não informado)'}\n\n"
+                    "Coloque o JSON original junto à pasta dos lotes ou gere novamente os lotes "
+                    "a partir do original disponível.",
+                    parent=self.parent,
+                )
+                return
+
         try:
             source_data = json.loads(source_path.read_text(encoding="utf-8-sig"))
             source_entries = source_data.get("textList") if isinstance(source_data, dict) else None
@@ -166,80 +256,14 @@ class TranslationBatchTab:
             messagebox.showerror("JSON original inválido", str(exc), parent=self.parent)
             return
 
-        batch_dirname = filedialog.askdirectory(
-            title="Selecionar pasta com os lotes JSON traduzidos",
-            initialdir=str(source_path.parent),
-        )
-        if not batch_dirname:
-            return
-        batch_dir = Path(batch_dirname)
-        # Preferir os lotes diretamente na pasta escolhida. Se ela for uma pasta
-        # pai, localizar o conjunto correto pelo manifesto criado na divisão.
-        def batches_in(folder: Path) -> list[Path]:
-            return sorted(
-                path for path in folder.glob("lote_*.json")
-                if path.is_file() and path.name != "manifest_lotes.json"
+        if manifest.get("source_file") != source_path.name or manifest.get("source_entry_count") != len(source_entries):
+            messagebox.showerror(
+                "Manifesto incompatível",
+                "O manifesto não corresponde ao JSON original localizado. "
+                "Nenhum arquivo unificado foi criado.",
+                parent=self.parent,
             )
-
-        batch_paths = batches_in(batch_dir)
-        if not batch_paths:
-            candidates: list[tuple[Path, list[Path]]] = []
-            for manifest_path in batch_dir.rglob("manifest_lotes.json"):
-                try:
-                    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
-                except (OSError, UnicodeError, json.JSONDecodeError):
-                    continue
-                if (
-                    manifest.get("source_file") == source_path.name
-                    and manifest.get("source_entry_count") == len(source_entries)
-                ):
-                    folder = manifest_path.parent
-                    paths = batches_in(folder)
-                    if paths:
-                        candidates.append((folder, paths))
-
-            # Manifesto ausente (por exemplo, se os lotes foram movidos): aceitar
-            # somente um único conjunto inequívoco, nunca misturar pastas distintas.
-            if not candidates:
-                folders: dict[Path, list[Path]] = {}
-                for path in batch_dir.rglob("lote_*.json"):
-                    if path.is_file() and path.name != "manifest_lotes.json":
-                        folders.setdefault(path.parent, []).append(path)
-                folders = {folder: sorted(paths) for folder, paths in folders.items()}
-                if len(folders) == 1:
-                    candidates = list(folders.items())
-
-            if len(candidates) == 1:
-                batch_dir, batch_paths = candidates[0]
-            elif len(candidates) > 1:
-                folders_text = "\n".join(str(folder) for folder, _ in candidates[:12])
-                messagebox.showerror(
-                    "Mais de um conjunto de lotes",
-                    "Foram encontrados vários conjuntos compatíveis com o JSON original. "
-                    "Selecione diretamente a pasta de um único conjunto de lotes:\n\n"
-                    + folders_text,
-                    parent=self.parent,
-                )
-                return
-            else:
-                examples = sorted(
-                    path.relative_to(batch_dir).as_posix()
-                    for path in batch_dir.rglob("*.json")
-                    if path.is_file()
-                )
-                detail = (
-                    "Há arquivos JSON, mas não foi possível identificar um conjunto de lotes "
-                    "compatível com o nome e a quantidade de entradas do original."
-                    if examples else
-                    "Nenhum arquivo JSON foi encontrado nessa pasta ou em suas subpastas."
-                )
-                messagebox.showerror(
-                    "Lotes não encontrados",
-                    f"JSON original: {source_path.name} ({len(source_entries)} entradas)\n"
-                    f"Pasta selecionada: {batch_dir}\n\n{detail}",
-                    parent=self.parent,
-                )
-                return
+            return
 
         translated_by_id: dict[tuple[type, Any], str] = {}
         errors: list[str] = []

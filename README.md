@@ -2,7 +2,7 @@
 
 Toolkit em Python para investigar recursos da versão Windows de **Suikoden I & II HD Remaster** e construir um fluxo reproduzível de localização para português brasileiro.
 
-> **Estado:** engenharia reversa inicial. O toolkit inspeciona cabeçalhos UnityFS, inventaria bundles, cria modelos de tradução e exporta catálogos a partir de JSON extraído de objetos Unity `TextAsset`. Ainda não extrai sozinho os objetos internos dos bundles e não reconstrói nem injeta textos em bundles.
+> **Estado:** engenharia reversa inicial. O toolkit inspeciona cabeçalhos UnityFS, inventaria bundles e pode usar o UnityDataTool instalado localmente para extrair o JSON `textList` de um `TextAsset`. Ainda não reconstrói nem injeta textos em bundles.
 
 ## Objetivos e princípios
 
@@ -18,13 +18,14 @@ Toolkit em Python para investigar recursos da versão Windows de **Suikoden I & 
 - `suikoden-tool inspect`: inspeciona o cabeçalho de um bundle UnityFS e calcula SHA-256.
 - `suikoden-tool inventory`: inventaria recursivamente bundles de uma pasta.
 - `suikoden-tool template`: gera um modelo inicial de tradução.
+- `suikoden-tool text extract`: executa o UnityDataTool configurado, localiza objetos `TextAsset` e extrai um JSON com `textList` sem modificar o bundle original. Exige seleção explícita se houver vários recursos compatíveis.
 - `suikoden-tool text export`: converte um JSON com a estrutura `{"textList":[{"id":1,"text":"..."}]}` em um catálogo traduzível.
 - `suikoden-tool text validate` e `text stats`: validam e acompanham o progresso do catálogo.
 - `suikoden-tool text batch-export` e `text batch-import`: exportam/importam lotes CSV compatíveis com Excel, validando IDs e textos originais.
 - `suikoden-tool gui` / `suikoden-gui`: editor gráfico escuro com busca, filtros de status, salvamento seguro e sugestão de tradução por IA opcional.
 - Testes automatizados para exportação, preservação de texto, validação e fluxo CSV.
 
-O comando `text export` **não extrai o TextAsset diretamente do bundle**. A extração do objeto foi feita durante a investigação com UnityDataTool; o comando recebe o JSON já extraído. Se o catálogo de saída já existir, a exportação mescla os dados com segurança.
+O comando `text extract` usa a CLI externa UnityDataTool para obter `m_Script` do objeto `TextAsset` e aceita apenas conteúdo JSON com uma lista `textList`. O comando `text export` converte esse JSON em catálogo. A extração depende da versão instalada do UnityDataTool e ainda precisa ser validada localmente contra os bundles reais; a reinserção não está implementada. Se o catálogo de saída já existir, a exportação mescla os dados com segurança.
 
 ## Estado comprovado da investigação
 
@@ -74,6 +75,18 @@ suikoden-tool template --game suikoden_i -o data\suikoden_i_template.json
 suikoden-tool template --game suikoden_ii -o data\suikoden_ii_template.json
 ```
 
+### Extrair um TextAsset diretamente do bundle
+
+Configure o UnityDataTool de uma destas formas: informe `--tool`, defina a variável `UNITY_DATA_TOOL` ou coloque `UnityDataTool.exe` em `tools/UnityDataTools/`. Baixe a ferramenta apenas das [releases oficiais](https://github.com/Unity-Technologies/UnityDataTools/releases).
+
+```powershell
+suikoden-tool text extract `
+    --bundle "C:\caminho\StandaloneWindows64\700bf7ec8ded4a20613b92988e3f8142.bundle" `
+    --output work\bundle_analysis\text_add_en.json `
+    --asset-name text_add_en
+```
+
+Se o bundle contiver mais de um `SerializedFile`, informe `--entry` com o nome listado por `UnityDataTool archive list`. Se houver mais de um `TextAsset` com `textList`, informe o nome exato em `--asset-name`. A saída existente não é sobrescrita sem `--force`. O comando extrai apenas a fonte JSON; a criação/mesclagem do catálogo continua sendo uma etapa separada.
 ### Exportar catálogo a partir de JSON extraído
 
 ```powershell
@@ -143,7 +156,7 @@ AssetRipper, UABEA e UnityDataTool são auxiliares locais, não dependências ob
 1. Documentar o comportamento atual e estabelecer uma linha de base reproduzível.
 2. Ampliar validação de tokens, variáveis e consistência linguística com regras confirmadas.
 3. Adicionar testes de integração da CLI e validar fluxos com catálogos reais em cópias locais.
-4. Automatizar a extração de TextAssets usando uma ferramenta externa detectada/configurada, mantendo o parser desacoplado.
+4. Validar `text extract` contra UnityDataTool 2.4.0 e os bundles reais em Windows; reforçar o parser com amostras reais de dumps antes de considerar a extração estável.
 5. Inventariar outros bundles e localizar recursos de diálogo dos dois jogos.
 6. Só então projetar importação/reconstrução, com testes de ida e volta e cópias de segurança.
 

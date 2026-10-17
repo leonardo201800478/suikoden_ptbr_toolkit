@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 from suikoden_tool.textasset_dump_export import export_textasset_dumps
@@ -30,7 +31,7 @@ def test_export_textasset_dumps_preserves_non_json_script_and_full_dump(tmp_path
     monkeypatch.setattr("suikoden_tool.textasset_dump_export.subprocess.run", fake_run)
 
     result = export_textasset_dumps([bundle], tool, output)
-    saved = (output / result["exported"][0]["path"].split("/")[-1]).read_text(encoding="utf-8")
+    saved = Path(result["exported"][0]["path"]).read_text(encoding="utf-8")
 
     assert result["exported_count"] == 1
     assert result["exported"][0]["asset_name"] == "text_menu_en"

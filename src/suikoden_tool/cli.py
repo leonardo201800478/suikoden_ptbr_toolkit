@@ -13,6 +13,7 @@ from suikoden_tool.text_catalog import (
     validate_catalog,
 )
 from suikoden_tool.translation_schema import make_translation_entry
+from suikoden_tool.unity_text_extractor import extract_textasset_json
 
 
 def _write_json(data: object, output: Path) -> None:
@@ -46,6 +47,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     text_commands = commands.add_parser("text", help="Operações com textos extraídos")
     text_subcommands = text_commands.add_subparsers(dest="text_command", required=True)
+
+    p = text_subcommands.add_parser("extract", help="Extrai JSON textList de um TextAsset via UnityDataTool")
+    p.add_argument("--bundle", required=True, type=Path, help="Bundle UnityFS de entrada (somente leitura)")
+    p.add_argument("--output", required=True, type=Path, help="JSON extraído de saída")
+    p.add_argument("--tool", type=Path, help="Caminho do UnityDataTool.exe; também pode usar UNITY_DATA_TOOL")
+    p.add_argument("--entry", help="Nome do SerializedFile dentro do bundle, se houver mais de um")
+    p.add_argument("--asset-name", help="Nome exato do TextAsset a extrair, se houver vários")
+    p.add_argument("--timeout", type=int, default=120, help="Tempo limite por chamada em segundos (padrão: 120)")
+    p.add_argument("--force", action="store_true", help="Permite substituir um JSON de saída existente")
 
     p = text_subcommands.add_parser("export", help="Cria ou atualiza catálogo sem perder traduções")
     p.add_argument("--input", required=True, type=Path, help="JSON extraído do TextAsset")
@@ -96,6 +106,17 @@ def main() -> None:
                 args.output,
             )
             print(f"Bundles encontrados: {len(records)}. Inventário: {args.output}")
+        elif args.command == "text" and args.text_command == "extract":
+            result = extract_textasset_json(
+                args.bundle,
+                args.output,
+                executable=args.tool,
+                entry=args.entry,
+                asset_name=args.asset_name,
+                timeout=args.timeout,
+                force=args.force,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
         elif args.command == "text" and args.text_command == "export":
             result = export_text_catalog(args.input, args.output, args.target_language)
             print(f"Catálogo atualizado: {args.output.resolve()}")

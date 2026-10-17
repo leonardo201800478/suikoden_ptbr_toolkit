@@ -121,7 +121,7 @@ def import_translation_batch(catalog_path: Path, input_path: Path) -> dict[str, 
             or not isinstance(original, str)
             or not isinstance(translation, str)
         ):
-            raise ValueError(f"Linha {line_number}: contém coluna ou valor ausente.")
+            raise TypeError(f"Linha {line_number}: contém coluna ou valor ausente ou de tipo inválido.")
         if id_type == "int":
             if not re.fullmatch(r"-?\d+", id_text):
                 raise ValueError(f"Linha {line_number}: ID inteiro inválido: {id_text!r}.")

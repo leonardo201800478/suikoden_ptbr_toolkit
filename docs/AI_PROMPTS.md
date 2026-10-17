@@ -48,6 +48,10 @@ Use um prompt por tarefa. Antes de começar, forneça ao assistente `docs/AI_CON
 
 > Investigue os requisitos de importação e reconstrução apenas depois de identificar a estrutura binária real do asset. Liste evidências necessárias, campos que devem ser preservados, estratégias de round-trip, validação por hash e teste em cópia. Não implemente escrita no bundle com base apenas no cabeçalho UnityFS ou no JSON extraído. Comece por um plano de prova de conceito e critérios de aceitação.
 
+## 13. Atualizar ou validar um catálogo sem perda de dados
+
+> Use `suikoden-tool text export` para mesclar uma nova extração com o catálogo existente. Antes de recomendar a operação, confirme que o recurso e o idioma de destino coincidem. Verifique que traduções compatíveis sejam preservadas, mudanças de origem recebam `needs_review` e `previous_original`, e IDs ausentes sejam mantidos como `orphaned`. Depois execute `text validate` com `--source` e `text stats`. Nunca sobrescreva manualmente um catálogo malformado sem backup.
+
 ## 12. Fazer uma sessão curta de continuidade
 
 > Continue o projeto a partir de `docs/AI_CONTEXT.md` e `docs/REVERSE_ENGINEERING_LOG.md`. Confira o estado atual do Git e o código real antes de assumir qualquer coisa. Identifique a próxima tarefa prioritária que não esteja concluída, proponha uma alteração pequena com testes e pare para reportar resultados verificáveis. Não repita tarefas já concluídas e não trate arquivos locais em `work/` como parte do repositório.

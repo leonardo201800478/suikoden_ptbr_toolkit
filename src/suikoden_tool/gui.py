@@ -23,6 +23,7 @@ from suikoden_tool.gui_service import (
     save_entry,
     suggest_translation,
 )
+from suikoden_tool.dump_catalog_import import import_dump_to_catalog
 from suikoden_tool.text_catalog import export_text_catalog
 from suikoden_tool.text_discovery import discover_text_assets
 from suikoden_tool.textasset_dump_export import export_textasset_dumps
@@ -144,6 +145,7 @@ class TranslationApp:
             side="left", padx=(16, 0), pady=(5, 0)
         )
         ttk.Button(header, text="Abrir catálogo", command=self.choose_catalog).pack(side="right")
+        ttk.Button(header, text="Importar dumps TextAsset", command=self.choose_textasset_dumps).pack(side="right", padx=(0, 8))
         self.file_label = ttk.Label(header, text="Nenhum catálogo aberto", style="Muted.TLabel")
         self.file_label.pack(side="right", padx=14)
 
@@ -588,6 +590,50 @@ class TranslationApp:
         else:
             detail = "Pasta válida; diretório Addressables StandaloneWindows64 não detectado ainda."
         self.game_directory_status.configure(text=detail)
+
+    def choose_textasset_dumps(self) -> None:
+        """Converte dumps TextAsset em catálogos JSON editáveis, sem alterar os dumps."""
+        filenames = filedialog.askopenfilenames(
+            title="Selecionar dumps TextAsset exportados para o UABEA",
+            filetypes=(("Dumps TextAsset", "*.txt"), ("Todos os arquivos", "*.*")),
+        )
+        if not filenames:
+            return
+        results: list[dict[str, Any]] = []
+        failures: list[str] = []
+        for filename in filenames:
+            try:
+                results.append(import_dump_to_catalog(Path(filename)))
+            except (OSError, ValueError) as exc:
+                failures.append(f"{Path(filename).name}: {exc}")
+        if results:
+            summary = "\n".join(
+                f"{item['asset_name']}: {item['entries']} entradas → {Path(item['catalog_path']).name}"
+                for item in results
+            )
+            if failures:
+                summary += "\n\nArquivos que precisam de análise específica:\n" + "\n".join(failures)
+            messagebox.showinfo(
+                "Importação de dumps concluída",
+                f"Catálogos criados: {len(results)}\n\n{summary}\n\n"
+                "Os dumps originais foram mantidos intactos.",
+                parent=self.root,
+            )
+            if len(results) == 1:
+                self.open_catalog(Path(results[0]["catalog_path"]))
+            else:
+                messagebox.showinfo(
+                    "Abrir catálogo",
+                    "Cada TextAsset gera seu próprio catálogo para evitar colisões de IDs. "
+                    "Use 'Abrir catálogo' para editar cada arquivo criado.",
+                    parent=self.root,
+                )
+        elif failures:
+            messagebox.showerror(
+                "Nenhum catálogo criado",
+                "\n\n".join(failures),
+                parent=self.root,
+            )
 
     def choose_catalog(self) -> None:
         filename = filedialog.askopenfilename(

@@ -35,6 +35,7 @@ def test_export_textasset_dumps_preserves_non_json_script_and_full_dump(tmp_path
 
     assert result["exported_count"] == 1
     assert result["exported"][0]["asset_name"] == "text_menu_en"
+    assert Path(result["exported"][0]["path"]).name == "text_menu_en-CAB-123-7.txt"
     assert saved == raw_dump
     assert "not-json\x00with-control" in saved
 
@@ -46,7 +47,7 @@ def test_export_textasset_dumps_does_not_overwrite_existing_dump(tmp_path, monke
     tool.write_bytes(b"placeholder")
     output = tmp_path / "dumps"
     output.mkdir()
-    existing = output / "sample__CAB-123__text_menu_en__7.txt"
+    existing = output / "text_menu_en-CAB-123-7.txt"
     existing.write_text("keep me", encoding="utf-8")
 
     def fake_run(command, **kwargs):

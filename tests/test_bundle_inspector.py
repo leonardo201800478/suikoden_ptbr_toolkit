@@ -1,6 +1,8 @@
 import struct
 from pathlib import Path
+
 from suikoden_tool.bundle_inspector import inspect_bundle
+
 
 def test_inspect_unityfs_header(tmp_path: Path) -> None:
     header = b"UnityFS\0" + struct.pack(">I", 8) + b"2022.3.0f1\0" + b"2022.3.0f1\0" + struct.pack(">QIII", 40, 10, 20, 0)

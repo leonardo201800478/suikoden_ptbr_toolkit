@@ -153,8 +153,7 @@ def export_text_catalog(
         merged_entry["id"] = fresh["id"]
         if old.get("original") != fresh["original"]:
             previous_original = old.get("original")
-            if "previous_original" not in merged_entry:
-                merged_entry["previous_original"] = previous_original
+            merged_entry["previous_original"] = previous_original
             merged_entry["original"] = fresh["original"]
             merged_entry["source_changed"] = True
             merged_entry["status"] = "needs_review"

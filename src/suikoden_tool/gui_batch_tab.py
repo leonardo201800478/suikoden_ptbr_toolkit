@@ -173,14 +173,28 @@ class TranslationBatchTab:
         if not batch_dirname:
             return
         batch_dir = Path(batch_dirname)
+        # Os lotes podem estar dentro de subpastas (por exemplo, a pasta criada
+        # automaticamente com o nome completo do JSON de origem). Pesquisar
+        # recursivamente evita exigir que o usuário encontre o nível exato.
         batch_paths = sorted(
-            path for path in batch_dir.glob("lote_*.json")
+            path for path in batch_dir.rglob("lote_*.json")
             if path.is_file() and path.name != "manifest_lotes.json"
         )
         if not batch_paths:
+            examples = sorted(
+                path.relative_to(batch_dir).as_posix()
+                for path in batch_dir.rglob("*.json")
+                if path.is_file()
+            )
+            detail = (
+                "Foram encontrados arquivos JSON, mas nenhum corresponde ao padrão lote_*.json.\n"
+                "Confira se os arquivos traduzidos mantêm nomes como lote_001.json."
+                if examples else
+                "Nenhum arquivo JSON foi encontrado nessa pasta ou em suas subpastas."
+            )
             messagebox.showerror(
                 "Lotes não encontrados",
-                "A pasta selecionada não contém arquivos lote_*.json.",
+                f"Pasta selecionada:\n{batch_dir}\n\n{detail}",
                 parent=self.parent,
             )
             return

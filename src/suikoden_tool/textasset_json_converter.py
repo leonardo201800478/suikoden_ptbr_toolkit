@@ -128,7 +128,7 @@ def convert_textasset_batch(
             if "batch_errors" not in item:
                 log_file.write(json.dumps({"status": "ok", **item}, ensure_ascii=False) + "\n")
         for error in errors:
-            log_file.write(json.dumps({"status": "error", **error}, ensure_ascii=False) + "\\n")
+            log_file.write(json.dumps({"status": "error", **error}, ensure_ascii=False) + "\n")
     # Mantém retorno dos sucessos e erros estruturados para a GUI/CLI.
     if errors:
         results.append({"batch_errors": errors, "log_path": str(log_path)})

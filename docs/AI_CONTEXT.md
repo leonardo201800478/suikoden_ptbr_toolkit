@@ -22,7 +22,9 @@ Construir em Python uma ferramenta prática, eficiente e segura para investigar,
 - `inspect`: inspeção não destrutiva de cabeçalho UnityFS e SHA-256.
 - `inventory`: inventário recursivo de bundles.
 - `template`: criação de um JSON inicial de tradução.
-- `text export`: converte um JSON já extraído contendo `textList` em catálogo com campos `id`, `original`, `translation` e `status`.
+- `text export`: cria ou mescla um catálogo de JSON já extraído com `textList`; preserva traduções compatíveis, marca mudanças de origem para revisão e preserva IDs removidos como `orphaned`.
+- `text validate`: verifica estrutura, IDs duplicados, campos, status e traduções pendentes; com `--source`, compara IDs e textos contra uma extração atual.
+- `text stats`: conta entradas por status e percentual concluído sem alterar o catálogo.
 
 Exemplo de entrada para `text export`:
 
@@ -35,7 +37,7 @@ Exemplo de entrada para `text export`:
 }
 ```
 
-O comando de exportação não extrai diretamente o objeto de dentro do bundle. Ele opera sobre um JSON previamente extraído. Cada exportação atual cria traduções vazias; não há mesclagem segura de traduções existentes. Nunca afirmar o contrário.
+Os comandos de texto não extraem diretamente objetos de dentro dos bundles; operam sobre JSON previamente extraído. A mesclagem segura de catálogos está implementada. Quando a origem muda, a tradução existente é mantida, `previous_original` é preservado, `source_changed` fica verdadeiro e o status passa a `needs_review`. IDs removidos da extração são mantidos como `orphaned`.
 
 ## Evidência de engenharia reversa
 
@@ -58,7 +60,7 @@ Detalhes, hashes e limitações: `docs/REVERSE_ENGINEERING_LOG.md`.
 5. Preservar IDs, ordenação, tokens, marcadores, variáveis e quebras de linha até que as regras sejam confirmadas.
 6. Não inventar limites de caracteres, semântica de tokens, mapeamento de IDs ou estrutura de reconstrução.
 7. Preferir funções pequenas, tipadas e testáveis; manter dependências de runtime em zero quando possível.
-8. Adicionar testes para caminho válido, dados inválidos, Unicode, strings vazias, marcadores, IDs duplicados e prevenção de perda de traduções.
+8. Adicionar testes para caminho válido, dados inválidos, Unicode, strings vazias, marcadores, IDs duplicados, preservação de traduções, mudanças de origem e IDs órfãos.
 9. Não incluir bundles, executáveis de ferramentas, dumps integrais ou textos proprietários do jogo no Git.
 10. Documentar hipóteses, comandos exatos, versão da ferramenta, hash de entrada e resultados.
 11. Se um comando for destrutivo ou puder substituir traduções, alertar claramente e implementar proteção/backup antes de recomendá-lo.

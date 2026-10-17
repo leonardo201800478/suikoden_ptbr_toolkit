@@ -203,7 +203,15 @@ def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]
     errors: list[str] = []
     warnings: list[str] = []
     if not isinstance(catalog, dict):
-        return {"valid": False, "errors": ["A raiz do catálogo precisa ser um objeto."], "warnings": []}
+        errors = ["A raiz do catálogo precisa ser um objeto."]
+        return {
+            "valid": False,
+            "entry_count": 0,
+            "error_count": len(errors),
+            "warning_count": 0,
+            "errors": errors,
+            "warnings": [],
+        }
 
     if catalog.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"schema_version precisa ser {SCHEMA_VERSION}.")

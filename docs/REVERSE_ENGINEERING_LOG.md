@@ -100,3 +100,19 @@ Os quatro foram relatados como UnityFS format version 8, Unity version `5.x.x`, 
 ## Critério para novas entradas neste registro
 
 Cada experimento novo deve registrar: data, arquivo e SHA-256, ferramenta/versão, comando, resultado, artefatos de saída, limitações e se houve teste no jogo. Evite copiar dumps integrais ou texto proprietário para este arquivo.
+
+## Pacote de referência de tradução anterior fornecido para análise
+
+O ZIP de referência contém quatro bundles UnityFS e um `Leia-me.txt`. O leia-me descreve a tradução como versão 1.5 de Suikoden I e versão 1.1 de Suikoden II, compatível com a versão 1.0.3 do jogo. Os arquivos parecem ser artefatos de uma tradução já aplicada e devem ser tratados como **referência de comparação**, não como bundles originais em inglês.
+
+| Bundle | Tamanho (bytes) | SHA-256 |
+|---|---:|---|
+| `03cf0288ba3ecaca0776d7fadf1f0bb6.bundle` | 851.544 | `ff45c680c2e3ed50ae7e2bf669261278d1ab482d8778ebc43ed786d0139ce444` |
+| `0573e2f60d0cda7892d60f38dfd7282c.bundle` | 2.978.404 | `f3982a89122b6a788484ab1d82daf242ff54377a9d013ee269d6a5068f7009ef` |
+| `49d65af6f8fea7a9e8008c6b2c688fc3.bundle` | 4.561.167 | `168128204b0980ebde0310ee87beb3ce55116a430fe1550d77e13c45c37a095b` |
+| `700bf7ec8ded4a20613b92988e3f8142.bundle` | 124.764 | `e267cf2afc7c143c0bf69436ab935531bc065cbaff8a0fdb432568884b74b123` |
+
+Os quatro arquivos foram reconhecidos como UnityFS, formato 8, Unity version informada como `5.x.x`. A presença do nome `text_add_en` foi observada em bytes do bundle `700bf7ec8ded4a20613b92988e3f8142.bundle`, mas ainda não foi feita uma descoberta sistemática dos objetos internos de todos os quatro arquivos neste pacote de referência. Não atribuir função definitiva a cada hash até obter o relatório de TextAssets via UnityDataTool.
+
+O arquivo `700bf...` tem tamanho e SHA-256 diferentes do bundle de 28.478 bytes registrado na seção de investigação original. Não presumir equivalência: comparar o caminho, hash e objetos extraídos antes de reutilizar resultados anteriores.
+

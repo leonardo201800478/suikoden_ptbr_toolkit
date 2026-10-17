@@ -284,28 +284,31 @@ def test_export_refuses_to_overwrite_source_file(tmp_path):
     assert source.read_bytes() == before
 
 
-def test_export_refuses_invalid_existing_catalog_without_modifying_it(tmp_path):
-    source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "Original"}])
+def test_export_does_not_run_translation_integrity_validation_when_loading(tmp_path):
+    source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "Original∠Changed"}])
     output = tmp_path / "catalog.json"
-    original_bytes = json.dumps(
-        {
-            "schema_version": 1,
-            "resource": "resource",
-            "source_language": "en",
-            "target_language": "pt-BR",
-            "entries": [
-                {"id": 1, "original": "Original", "translation": 123, "status": "translated"}
-            ],
-        }
-    ).encode()
-    output.write_bytes(original_bytes)
+    catalog = {
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
+        "target_language": "pt-BR",
+        "entries": [
+            {
+                "id": 1,
+                "original": "Original∠Changed",
+                "translation": "Tradução sem marcador e com\\nquebra extra",
+                "status": "translated",
+            }
+        ],
+    }
+    output.write_text(json.dumps(catalog, ensure_ascii=False), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="Catálogo existente inválido"):
-        export_text_catalog(source, output)
+    result = export_text_catalog(source, output)
 
-    assert output.read_bytes() == original_bytes
-
-
+    entry = result["catalog"]["entries"][0]
+    assert entry["translation"] == "Tradução sem marcador e com\\nquebra extra"
+    assert entry["status"] == "translated"
+    assert result["preserved"] == 1
 
 def test_validate_warns_when_known_marker_or_line_break_count_changes():
     catalog = {

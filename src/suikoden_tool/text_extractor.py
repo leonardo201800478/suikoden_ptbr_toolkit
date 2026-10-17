@@ -17,62 +17,13 @@ from typing import Any, Iterable
 from suikoden_tool.unity_text_extractor import _dump_textasset_fields
 
 def _loads_textasset_json(script: str) -> Any:
-    """Carrega JSON de TextAsset escapando controles crus dentro de strings.
+    """Interpreta JSON estritamente, sem reparar ou normalizar o conteúdo.
 
-    UnityDataTool pode emitir caracteres U+0000..U+001F literalmente dentro dos
-    valores. Escapá-los para o parser JSON preserva o caractere no texto resultante.
-    Não altera '?' nem outros caracteres imprimíveis.
+    Caracteres de controle crus, aspas inválidas e escapes malformados devem
+    gerar erro com diagnóstico. A ferramenta não deve adivinhar a intenção do
+    dump, pois isso pode alterar silenciosamente strings do jogo.
     """
-    try:
-        return json.loads(script)
-    except json.JSONDecodeError as original_error:
-        repaired: list[str] = []
-        in_string = False
-        escaped = False
-        changed = False
-        index = 0
-        while index < len(script):
-            char = script[index]
-            code = ord(char)
-            if in_string and code < 0x20:
-                repaired.append(f"\\u{code:04x}")
-                changed = True
-                escaped = False
-                index += 1
-                continue
-            if in_string:
-                if escaped:
-                    repaired.append(char)
-                    escaped = False
-                elif char == "\\":
-                    repaired.append(char)
-                    escaped = True
-                elif char == '"':
-                    lookahead = index + 1
-                    while lookahead < len(script) and script[lookahead].isspace():
-                        lookahead += 1
-                    next_char = script[lookahead] if lookahead < len(script) else ""
-                    if next_char and next_char not in ",}]:}":
-                        # Aspas literais dentro de diálogos aparecem sem escape em
-                        # alguns TextAssets. Não podem encerrar a string JSON.
-                        repaired.append('\\"')
-                        changed = True
-                    else:
-                        repaired.append(char)
-                        in_string = False
-                else:
-                    repaired.append(char)
-            else:
-                repaired.append(char)
-                if char == '"':
-                    in_string = True
-            index += 1
-        if changed:
-            try:
-                return json.loads("".join(repaired))
-            except json.JSONDecodeError:
-                pass
-        raise original_error
+    return json.loads(script)
 
 
 DEFAULT_BUNDLE_NAMES = (
@@ -109,7 +60,7 @@ class ExtractedText:
 
 def _run_json(command: list[str]) -> Any:
     """Executa UnityDataTool e interpreta a saída JSON sem despejá-la no terminal."""
-    completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="strict")
     if completed.returncode:
         detail = (completed.stderr or completed.stdout).strip()
         raise RuntimeError(f"UnityDataTool falhou ({completed.returncode}): {detail[:1200]}")
@@ -213,7 +164,7 @@ def extract_from_bundles(
                 object_id = obj.get("id")
                 dumped = subprocess.run(
                     [str(unity_data_tool), "dump", str(bundle), "--objectid", str(object_id), "--stdout", "-e", asset_path],
-                    capture_output=True, text=True, encoding="utf-8", errors="replace",
+                    capture_output=True, text=True, encoding="utf-8", errors="strict",
                 )
                 if dumped.returncode:
                     diagnostics.append({"bundle": bundle_name, "asset_path": asset_path, "object_path_id": object_id,
@@ -244,9 +195,8 @@ def extract_from_bundles(
                         })
                         continue
                     pairs = extract_id_text_pairs(payload)
-                except json.JSONDecodeError as exc:
-                    # Alguns dumps podem conter JSON parcial/serialização com escapes inválidos.
-                    # Mantemos diagnóstico detalhado em vez de descartar silenciosamente o objeto.
+                except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                    # Conteúdo inválido é reportado; nenhuma correção automática é aplicada.
                     diagnostics.append({
                         "bundle": bundle_name,
                         "asset_path": asset_path,
@@ -255,6 +205,7 @@ def extract_from_bundles(
                         "warning": "m_Script não contém JSON válido.",
                         "json_error": str(exc),
                         "script_preview": script[:1000],
+                        "integrity_action": "rejected_without_repair",
                     })
                     continue
                 for text_id, text in pairs:

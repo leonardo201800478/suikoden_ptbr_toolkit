@@ -285,3 +285,50 @@ def test_export_refuses_invalid_existing_catalog_without_modifying_it(tmp_path):
         export_text_catalog(source, output)
 
     assert output.read_bytes() == original_bytes
+
+
+
+def test_validate_warns_when_known_marker_or_line_break_count_changes():
+    catalog = {
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
+        "target_language": "pt-BR",
+        "entries": [
+            {
+                "id": 1,
+                "original": "First∠Second\\nThird",
+                "translation": "Primeiro Segundo\\nTerceiro\\nExtra",
+                "status": "translated",
+            }
+        ],
+    }
+
+    report = validate_catalog(catalog)
+    warnings = "\\n".join(report["warnings"])
+
+    assert report["valid"] is True
+    assert "quantidade do marcador ∠ difere" in warnings
+    assert "quantidade de quebras de linha difere" in warnings
+
+
+def test_validate_accepts_matching_known_marker_and_line_break_counts():
+    catalog = {
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
+        "target_language": "pt-BR",
+        "entries": [
+            {
+                "id": 1,
+                "original": "First∠Second\\nThird",
+                "translation": "Primeiro∠Segundo\\nTerceiro",
+                "status": "translated",
+            }
+        ],
+    }
+
+    report = validate_catalog(catalog)
+
+    assert not any("marcador ∠ difere" in warning for warning in report["warnings"])
+    assert not any("quebras de linha difere" in warning for warning in report["warnings"])

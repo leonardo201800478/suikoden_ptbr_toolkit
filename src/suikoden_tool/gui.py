@@ -384,7 +384,7 @@ class TranslationApp:
             return
         tool = Path(__file__).resolve().parents[2] / "tools" / "UnityDataTools" / "UnityDataTool.exe"
         try:
-            executable = resolve_unity_data_tool(tool)
+            executable = resolve_unity_data_tool(tool) if tool.is_file() else resolve_unity_data_tool()
         except ValueError as exc:
             messagebox.showerror("UnityDataTool", str(exc), parent=self.root)
             return

@@ -14,16 +14,16 @@ Projeto inicial em Python para analisar recursos da versão Windows e desenvolve
 Recomendação inicial: Python 3.12 ou 3.13.
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\\.venv\\Scripts\\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
 ## Comandos
 ```powershell
-suikoden-tool inspect "C:\caminho\arquivo.bundle"
-suikoden-tool inventory "C:\caminho\StandaloneWindows64" -o output\bundle_inventory.json
-suikoden-tool template --game suikoden_i -o data\translations_template.json
+suikoden-tool inspect "C:\\caminho\\arquivo.bundle"
+suikoden-tool inventory "C:\\caminho\\StandaloneWindows64" -o output\\bundle_inventory.json
+suikoden-tool template --game suikoden_i -o data\\translations_template.json
 pytest
 ruff check .
 ```
@@ -36,6 +36,10 @@ ruff check .
 Links: https://github.com/AssetRipper/AssetRipper · https://github.com/nesrak1/UABEA · https://github.com/Unity-Technologies/UnityDataTools
 
 Os arquivos fornecidos apresentam assinatura `UnityFS` e estão em `StreamingAssets/aa/StandaloneWindows64`, estrutura típica de Unity Addressables. Isso identifica o contêiner, não ainda o recurso que contém cada texto.
+
+## Guia de tradução PT-BR (Suikoden I e II)
+
+A nomenclatura aprovada deve ser compartilhada pelos dois jogos. Consulte **[Guia de tradução e glossário PT-BR](docs/GLOSSARIO_TRADUCAO_PTBR.md)** antes de traduzir ou revisar textos. A forma aprovada de um termo deve ser reutilizada sempre que o mesmo conceito aparecer; não criar variantes sem registrar e revisar a decisão. O guia também define os marcadores que precisam ser preservados.
 
 ## Carregar arquivos JSON já preparados para tradução
 
@@ -119,7 +123,7 @@ Trabalhe em cópias e mantenha os arquivos originais preservados.
 O comando `extract-texts` processa os quatro bundles conhecidos, considera somente entradas `SerializedFile`, identifica objetos `TextAsset` e procura pares JSON `id`/`text`. A extração é somente leitura: não reconstrói nem sobrescreve os bundles originais.
 
 ```powershell
-suikoden-tool extract-texts "G:\SteamLibrary\steamapps\common\Suikoden I and II HD Remaster\Suikoden I and II HD Remaster_Data\StreamingAssets\aa\StandaloneWindows64" --unity-data-tool ".\tools\UnityDataTools\UnityDataTool.exe" -o output\catalogo_textos.json --csv output\catalogo_textos.csv
+suikoden-tool extract-texts "G:\\SteamLibrary\\steamapps\\common\\Suikoden I and II HD Remaster\\Suikoden I and II HD Remaster_Data\\StreamingAssets\\aa\\StandaloneWindows64" --unity-data-tool ".\\tools\\UnityDataTools\\UnityDataTool.exe" -o output\\catalogo_textos.json --csv output\\catalogo_textos.csv
 ```
 
 O JSON é o catálogo principal; o CSV UTF-8 com BOM facilita a revisão no Excel. Cada entrada conserva o ID de origem, o bundle, o caminho do SerializedFile, o ID do objeto e o texto original. O marcador `?` observado nos dumps é preservado literalmente e listado em `control_tokens`; **não é convertido automaticamente em quebra de linha**, pois seu significado ainda precisa ser confirmado. Os diagnósticos do catálogo registram contagens por bundle e eventuais erros.

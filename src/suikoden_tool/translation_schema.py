@@ -1,5 +1,7 @@
 """Esquema inicial de entradas de tradução JSON."""
+
 from typing import Any
+
 
 def make_translation_entry(entry_id: str, source_text: str = "") -> dict[str, Any]:
     """Cria uma entrada com campos de tradução, contexto e metadados técnicos."""

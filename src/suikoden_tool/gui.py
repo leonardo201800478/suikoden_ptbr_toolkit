@@ -815,13 +815,17 @@ class TranslationApp:
 
     @staticmethod
     def _markers_to_lines(value: str) -> str:
-        """Exibe o texto original literalmente, sem ocultar nem converter marcadores."""
-        return value
+        """Mostra cada marcador ∠ como fim de linha visível no editor."""
+        # Mantém o marcador no final da linha para que ele nunca fique oculto.
+        return value.replace("∠", "∠\\n")
 
     @staticmethod
     def _lines_to_markers(value: str) -> str:
-        """Preserva literalmente o texto digitado, incluindo marcadores e quebras reais."""
-        return value
+        """Converte as quebras visuais inseridas após ∠ de volta ao marcador original."""
+        # Remove apenas a quebra que a própria visualização adiciona imediatamente após ∠.
+        # Quebras digitadas pelo usuário em outros pontos são preservadas como ∠ do jogo.
+        value = value.replace("∠\\r\\n", "∠").replace("∠\\n", "∠")
+        return value.replace("\\r\\n", "∠").replace("\\r", "∠").replace("\\n", "∠")
 
     @staticmethod
     def _set_text(widget: tk.Text, value: str, readonly: bool = False) -> None:

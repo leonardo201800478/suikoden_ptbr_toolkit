@@ -11,6 +11,7 @@ dependencies = []
 dev = ["pytest>=8.0", "ruff>=0.9"]
 [project.scripts]
 suikoden-tool = "suikoden_tool.cli:main"
+suikoden-gui = "suikoden_tool.gui:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 [tool.pytest.ini_options]

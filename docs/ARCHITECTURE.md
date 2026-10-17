@@ -6,7 +6,8 @@ O pacote usa a estrutura `src/`:
 
 - `src/suikoden_tool/bundle_inspector.py`: inspeção de cabeçalho UnityFS, SHA-256 e inventário recursivo.
 - `src/suikoden_tool/translation_schema.py`: construtor de uma entrada para o esquema inicial de tradução.
-- `src/suikoden_tool/cli.py`: CLI com `inspect`, `inventory`, `template` e `text export`.
+- `src/suikoden_tool/cli.py`: CLI com inspeção, inventário, catálogo, validação, estatísticas e operações CSV em lote.
+- `src/suikoden_tool/text_batch.py`: exportação/importação CSV com validação integral antes da gravação.
 - `tests/`: testes automatizados, incluindo exportação de catálogos.
 - `data/`: modelos iniciais versionáveis.
 - `work/`: resultados locais de investigação; não assumir que existem em outro clone e não versionar dumps proprietários.
@@ -21,7 +22,7 @@ O pacote usa a estrutura `src/`:
 | `template` | Jogo selecionado | Modelo JSON de tradução | Não representa uma extração real. |
 | `text export` | JSON com `textList` + saída opcional existente | Cria/mescla catálogo JSON | Preserva traduções compatíveis; marca origem alterada e IDs órfãos. |
 | `text validate` | Catálogo + fonte opcional | Relatório JSON de erros/avisos | Não modifica arquivos. |
-| `text stats` | Catálogo JSON | Contagem por status e percentual concluído | Não modifica arquivos. |
+| `text stats` | Catálogo JSON | Contagem por status e percentual concluído | Não modifica arquivos. |\n| `text batch-export` | Catálogo JSON | CSV UTF-8 com BOM para Excel | Exporta até o limite configurado; por padrão inclui `pending` e `needs_review`. |\n| `text batch-import` | CSV + catálogo JSON | Atualiza traduções correspondentes | Valida IDs e texto original; células vazias não apagam traduções; `needs_review` é preservado. |
 
 ## Fluxo pretendido
 
@@ -50,7 +51,7 @@ Importação/reconstrução em cópia de trabalho
 Comparação de integridade + teste no jogo
 ```
 
-A inspeção básica, o inventário, o modelo, a exportação de JSON previamente extraído, a mesclagem segura, a validação estrutural e as estatísticas estão implementados. Extração automatizada, validação semântica de tokens, editor e reconstrução ainda são etapas futuras.
+A inspeção básica, o inventário, o modelo, a exportação de JSON previamente extraído, a mesclagem segura, a validação estrutural, as estatísticas e o fluxo CSV em lote estão implementados. Extração automatizada, validação semântica de tokens, editor gráfico e reconstrução ainda são etapas futuras.
 
 ## Ferramentas externas
 

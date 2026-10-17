@@ -22,6 +22,10 @@ Use um prompt por tarefa. Antes de começar, forneça ao assistente `docs/AI_CON
 
 > Implemente `suikoden-tool text validate` e/ou estatísticas sem alterar o catálogo. Verifique estrutura, versão de esquema, IDs únicos, tipos de campo, estados permitidos, traduções pendentes e preservação de marcadores/variáveis. Não presuma que o marcador `∠` significa quebra de linha até haver evidência. Diferencie erro bloqueante de aviso heurístico. Adicione testes e documente códigos de saída.
 
+## 6. Trabalhar em lotes CSV de tradução
+
+> Use `suikoden-tool text batch-export` para criar um lote CSV compatível com Excel e `text batch-import` para reaplicar traduções ao catálogo. Edite apenas `translation`; não altere IDs, tipo de ID ou texto original. Preserve marcadores, variáveis, Unicode e quebras de linha. Faça backup antes da importação, valide o catálogo depois e não marque entradas `needs_review` como concluídas sem revisão humana.
+
 ## 6. Investigar um novo bundle Unity
 
 > Analise o bundle [CAMINHO] de forma somente leitura. Registre SHA-256, tamanho, assinatura, ferramenta e versão, comandos exatos, objetos encontrados e resultados. Use cópias de trabalho para qualquer extração. Não conclua que um bundle pode ser reconstruído só porque foi aberto ou extraído. Não publique o conteúdo integral dos textos do jogo. Entregue um resumo técnico reproduzível e atualize `docs/REVERSE_ENGINEERING_LOG.md` com fatos, hipóteses e perguntas em aberto.

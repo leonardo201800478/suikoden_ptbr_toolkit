@@ -18,6 +18,7 @@ Toolkit em Python para investigar recursos da versão Windows de **Suikoden I & 
 - `suikoden-tool inspect`: inspeciona o cabeçalho de um bundle UnityFS e calcula SHA-256.
 - `suikoden-tool inventory`: inventaria recursivamente bundles de uma pasta.
 - `suikoden-tool template`: gera um modelo inicial de tradução.
+- `suikoden-tool text discover`: inventaria TextAssets de vários bundles, registra IDs, nomes, contagem de entradas e amostras de texto para classificar recursos sem modificar os originais.
 - `suikoden-tool text extract`: executa o UnityDataTool configurado, localiza objetos `TextAsset` e extrai um JSON com `textList` sem modificar o bundle original. Exige seleção explícita se houver vários recursos compatíveis.
 - `suikoden-tool text export`: converte um JSON com a estrutura `{"textList":[{"id":1,"text":"..."}]}` em um catálogo traduzível.
 - `suikoden-tool text validate` e `text stats`: validam e acompanham o progresso do catálogo.
@@ -74,6 +75,19 @@ suikoden-tool inventory "C:\caminho\StandaloneWindows64" -o output\bundle_invent
 suikoden-tool template --game suikoden_i -o data\suikoden_i_template.json
 suikoden-tool template --game suikoden_ii -o data\suikoden_ii_template.json
 ```
+
+### Descobrir os TextAssets de todos os bundles
+
+Execute a descoberta antes de classificar os recursos ou escolher o catálogo a traduzir:
+
+```powershell
+suikoden-tool text discover `
+    --directory "G:\\SteamLibrary\\steamapps\\common\\Suikoden I and II HD Remaster\\Suikoden I and II HD Remaster_Data\\StreamingAssets\\aa\\StandaloneWindows64" `
+    --output work\\bundle_analysis\\text_discovery.json `
+    --tool ".\\tools\\UnityDataTools\\UnityDataTool.exe"
+```
+
+O relatório registra tamanho e SHA-256 de cada bundle, objetos TextAsset, nome, quantidade de entradas `textList` e até oito amostras. Erros por bundle são registrados no relatório para permitir que a inspeção continue. A descoberta não modifica arquivos do jogo.
 
 ### Extrair um TextAsset diretamente do bundle
 

@@ -29,6 +29,8 @@ Este documento registra observações fornecidas durante a inspeção dos dumps 
 | `♂㈱` | Token combinado usado para o nome do protagonista em Suikoden I. A combinação deve ser considerada integral, não apenas `♂` isolado. | Preservar a sequência exata; verificar ocorrências de `♂` em outros contextos antes de aplicar validação automática. |
 | `♂①` | Token relacionado ao nome do castelo em Suikoden I, conforme a observação inicial. | Preservar a sequência exata. Confirmar a associação por jogo ao manter o catálogo de regras. |
 | `∨☆` | Marcador especial de transição. Foi sugerido que possa representar uma pausa mais longa, mas isso não foi confirmado de forma independente. | Preservar a sequência exata; não codificar duração ou semântica definitiva sem evidência adicional. |
+| `ＬＶ２`, `ＬＶ４` | Texto literal de nível em largura completa, conforme a informação fornecida. | Preservar cada caractere e a largura original. |
+| `♂⑩` | Relatado como referência ao protagonista de Suikoden I em diálogos de Suikoden II que recontam eventos ou tratam de dados carregados. | Preservar a sequência; manter a regra específica de Suikoden II e validar em contexto no jogo. |
 
 ## Suikoden II
 
@@ -41,11 +43,27 @@ Os itens abaixo são observações preliminares. **A busca posterior nos arquivo
 | `♂㈱` | Token do nome do protagonista de Suikoden II, conforme a observação fornecida. | Preservar a sequência exata, sem separar ou substituir caracteres. |
 | `♂②` | Token do nome do exército em Suikoden II, conforme a observação fornecida. | Preservar a sequência exata. |
 | `♂①` | Token do nome do castelo em Suikoden II, conforme a observação fornecida. | Preservar a sequência exata. |
-| `◎2`, `◎1` etc. | Indicadores ordinais: primeiro, segundo e assim por diante, conforme a observação fornecida. | Preservar o símbolo e o número. Não substituir por números ordinais localizados sem confirmar como o jogo interpreta esses marcadores. |
+| `◎1`, `◎2`, `◎5` etc. | Relatados como indicadores ordinais/estruturados usados em contextos como escolhas e minijogos. A interpretação exata pode depender do recurso. | Preservar o símbolo e o número. Não substituir por números ordinais localizados sem confirmar como o jogo interpreta esses marcadores. |
 
 ### Nota de auditoria
 
 Não documentar um token como presente apenas com base numa hipótese de interpretação ou numa lembrança do contexto. Para adicionar um padrão à lista de ocorrências verificadas, registrar pelo menos o arquivo de origem e a string exata (idealmente também o ID). Ausência nos arquivos examinados significa apenas que a busca não encontrou correspondência nesses arquivos; não prova que o padrão seja impossível em outros recursos do jogo.
+
+## Marcadores adicionais relatados para Suikoden I e II
+
+As interpretações desta seção foram fornecidas durante o trabalho de tradução e ainda devem ser verificadas contra ocorrências concretas e comportamento no jogo. Elas orientam a preservação, não autorizam substituição automática.
+
+| Elemento | Interpretação relatada | Regra para a ferramenta |
+|---|---|---|
+| `♂㈱` | Nome escolhido para o protagonista. | Tratar a sequência combinada como token indivisível; não substituir `♂` isoladamente. |
+| `♂①` | Nome do castelo/quartel-general. | Preservar a sequência exata. |
+| `♂②` | Nome do exército, relatado especificamente para Suikoden II. | Preservar a sequência exata e restringir a interpretação ao contexto do jogo correspondente. |
+| `♂⑩` | Referência ao herói de Suikoden I em determinados textos de Suikoden II. | Preservar a sequência exata; confirmar o contexto antes de aplicar validação semântica. |
+| `∠` | Quebra de linha dentro da mesma janela de diálogo. | Preservar o marcador no dump; qualquer visualização como nova linha deve ser reversível. |
+| `∨` | Transição para outra janela/bloco de diálogo. | Preservar; não converter em quebra de linha comum durante exportação/importação. |
+| `∨☆` | Marcador de transição com pausa/espera automática relatada. | Preservar sem inferir temporização. |
+| `ＬＶ２`, `ＬＶ３`, `ＬＶ４` | Rótulos de nível em caracteres de largura completa. | Não converter para ASCII (`LV2`, `LV3`, `LV4`). |
+| `★☆`, `★★☆☆`, `★★★☆☆☆` | Sequências visuais de estrelas. | Preservar símbolos, quantidade e ordem. |
 
 ## Cuidado com escapes JSON
 

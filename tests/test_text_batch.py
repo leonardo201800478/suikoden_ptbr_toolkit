@@ -59,7 +59,12 @@ def test_batch_import_updates_translation_and_keeps_original_intact(tmp_path):
         catalog_path,
         [
             {"id": 1, "original": original, "translation": "", "status": "pending"},
-            {"id": 2, "original": "Already translated", "translation": "Já traduzido", "status": "translated"},
+            {
+                "id": 2,
+                "original": "Already translated",
+                "translation": "Já traduzido",
+                "status": "translated",
+            },
         ],
     )
     with csv_path.open("w", encoding="utf-8-sig", newline="") as stream:

@@ -23,13 +23,18 @@ def discover_text_assets(
 ) -> dict[str, Any]:
     """Inventaria TextAssets em bundles e amostra JSON textList sem modificar entradas."""
     root = Path(directory).expanduser().resolve()
-    if not root.is_dir():
-        raise ValueError(f"Diretório de bundles não encontrado: {root}")
+    if not root.exists() or not (root.is_dir() or root.is_file()):
+        raise ValueError(f"Arquivo ou diretório de bundles não encontrado: {root}")
     if timeout < 1:
         raise ValueError("O tempo limite precisa ser maior que zero.")
 
     tool = resolve_unity_data_tool(executable)
-    bundles = sorted(root.rglob("*.bundle") if recursive else root.glob("*.bundle"))
+    if root.is_file():
+        if root.suffix.casefold() != ".bundle":
+            raise ValueError(f"O arquivo selecionado não tem extensão .bundle: {root}")
+        bundles = [root]
+    else:
+        bundles = sorted(root.rglob("*.bundle") if recursive else root.glob("*.bundle"))
     report: list[dict[str, Any]] = []
 
     for bundle in bundles:
@@ -105,7 +110,7 @@ def discover_text_assets(
 
     return {
         "schema_version": 1,
-        "directory": str(root),
+        "directory": str(root.parent if root.is_file() else root),
         "bundle_count": len(bundles),
         "bundles": report,
         "tool": str(tool),

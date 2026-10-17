@@ -68,10 +68,14 @@ Detalhes, hashes e limitações: `docs/REVERSE_ENGINEERING_LOG.md`.
 
 ## Linha de base conhecida
 
-Na branch `feature/text-catalog-export`, o usuário executou com sucesso:
-- `suikoden-tool text export --input work/bundle_analysis/text_add_en.json --output work/bundle_analysis/catalogo_pt_br.json --target-language pt-BR`
-- `python -m pytest -q` → 4 testes aprovados.
-- `suikoden-tool --help` e `suikoden-tool text export --help`.
+Antes desta ampliação, o usuário executou com sucesso `text export` e `python -m pytest -q`, com 4 testes aprovados na versão anterior. A nova implementação adiciona mesclagem, validação, estatísticas e testes de regressão; esses novos testes precisam ser executados localmente antes de declarar a alteração validada.
+
+Comandos para validar a versão atual:
+- `python -m pytest -q`
+- `ruff check .`
+- `suikoden-tool text export --help`
+- `suikoden-tool text validate --help`
+- `suikoden-tool text stats --help`
 
 A branch ainda é de desenvolvimento e não deve ser confundida com `main`.
 

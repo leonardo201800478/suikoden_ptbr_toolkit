@@ -1281,17 +1281,19 @@ class TranslationApp:
         ]
         if over_limit:
             details = "\\n".join(
-                f"Linha {line_number}: {count} caracteres (limite: 66)"
+                f"Linha {line_number}: {count} caracteres (limite de referência: 66)"
                 for line_number, count in over_limit
             )
-            messagebox.showwarning(
-                "Limite de caracteres excedido",
-                "A tradução não foi salva. Cada linha de diálogo pode ter no máximo 66 caracteres.\\n\\n"
+            proceed = messagebox.askyesno(
+                "Linha acima de 66 caracteres",
+                "A tradução contém linhas acima do limite de referência de 66 caracteres. "
+                "Isso pode ser necessário em menus, descrições ou outros textos que não sejam diálogos.\\n\\n"
                 + details
-                + "\\n\\nRevise as linhas indicadas e tente salvar novamente.",
+                + "\\n\\nDeseja salvar mesmo assim? Revise o texto no jogo para confirmar que ele não será cortado nem sobreporá a interface.",
                 parent=self.root,
             )
-            return
+            if not proceed:
+                return
         translation = self._lines_to_markers(raw_translation)
         try:
             saved = save_entry(self.catalog_path, entry["id"], translation, status)

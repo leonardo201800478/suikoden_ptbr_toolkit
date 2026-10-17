@@ -37,6 +37,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("directory", type=Path)
     p.add_argument("-o", "--output", type=Path, default=Path("output/bundle_inventory.json"))
 
+    p = commands.add_parser("gui", help="Abre o editor gráfico de tradução")
+    p.add_argument("--catalog", type=Path, help="Catálogo JSON a abrir ao iniciar")
+
     p = commands.add_parser("template", help="Cria JSON de tradução de exemplo")
     p.add_argument("-o", "--output", type=Path, default=Path("data/translations_template.json"))
     p.add_argument("--game", choices=["suikoden_i", "suikoden_ii"], default="suikoden_i")
@@ -77,7 +80,11 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     try:
-        if args.command == "inspect":
+        if args.command == "gui":
+            from suikoden_tool.gui import main as gui_main
+
+            gui_main(["--catalog", str(args.catalog)] if args.catalog else [])
+        elif args.command == "inspect":
             result = inspect_bundle(args.bundle)
             print(json.dumps(result, ensure_ascii=False, indent=2))
             if args.output:

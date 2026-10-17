@@ -16,13 +16,13 @@ from suikoden_tool.app_settings import (
     save_settings,
     validate_game_directory,
 )
+from suikoden_tool.gui_resource_tab import ResourceCatalogTab
 from suikoden_tool.gui_service import (
     get_catalog_stats,
     load_catalog,
     save_entry,
     suggest_translation,
 )
-from suikoden_tool.gui_resource_tab import ResourceCatalogTab
 from suikoden_tool.text_catalog import export_text_catalog
 from suikoden_tool.text_discovery import discover_text_assets
 from suikoden_tool.unity_text_extractor import extract_textasset_json, resolve_unity_data_tool

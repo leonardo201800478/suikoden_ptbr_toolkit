@@ -21,6 +21,7 @@ Toolkit em Python para investigar recursos da versão Windows de **Suikoden I & 
 - `suikoden-tool text export`: converte um JSON com a estrutura `{"textList":[{"id":1,"text":"..."}]}` em um catálogo traduzível.
 - `suikoden-tool text validate` e `text stats`: validam e acompanham o progresso do catálogo.
 - `suikoden-tool text batch-export` e `text batch-import`: exportam/importam lotes CSV compatíveis com Excel, validando IDs e textos originais.
+- `suikoden-tool gui` / `suikoden-gui`: editor gráfico escuro com busca, filtros de status, salvamento seguro e sugestão de tradução por IA opcional.
 - Testes automatizados para exportação, preservação de texto, validação e fluxo CSV.
 
 O comando `text export` **não extrai o TextAsset diretamente do bundle**. A extração do objeto foi feita durante a investigação com UnityDataTool; o comando recebe o JSON já extraído. Se o catálogo de saída já existir, a exportação mescla os dados com segurança.
@@ -94,7 +95,7 @@ suikoden-tool text stats --input work\\bundle_analysis\\catalogo_pt_br.json
 
 `validate` retorna erros estruturais e avisos para traduções pendentes, mudanças de texto e divergências com a fonte. `stats` conta `pending`, `translated`, `reviewed`, `needs_review` e `orphaned` sem alterar o arquivo.
 
-### Traduzir em lotes com CSV/Excel
+### Editor gráfico de tradução\n\nAbra o catálogo de trabalho em uma interface com lista à esquerda e editor à direita:\n\n```powershell\nsuikoden-tool gui --catalog work\\bundle_analysis\\catalogo_pt_br.json\n# ou, sem catálogo inicial:\nsuikoden-gui\n```\n\nA interface permite pesquisar por ID, original ou tradução, filtrar por status, editar manualmente, avançar para pendências e acompanhar as estatísticas. `Salvar tradução` marca a entrada como `translated`; `Salvar revisada` marca como `reviewed`. Entradas `needs_review` só podem ser confirmadas pelo salvamento explícito como revisadas. O catálogo é validado antes de cada gravação e as alterações são gravadas atomicamente, preservando campos extras e o texto original.\n\n**Assistência de IA opcional:** o botão `Sugerir com IA` envia somente o texto original selecionado e o contexto opcional para a API OpenAI. A sugestão aparece no editor, mas nunca é gravada automaticamente; revise e salve manualmente. Configure `OPENAI_API_KEY` no ambiente antes de usar o recurso. Opcionalmente, defina `OPENAI_MODEL` (padrão `gpt-4o-mini`). A chave não é armazenada no catálogo nem na interface. A chamada à API pode gerar custos conforme sua conta. A edição manual funciona sem chave e sem dependências Python extras.\n\n### Traduzir em lotes com CSV/Excel
 
 ```powershell
 # Exporta até 100 entradas pendentes e que precisam de revisão

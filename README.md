@@ -136,7 +136,6 @@ suikoden-tool text stats --help
 
 Execute esses comandos na branch atual após atualizar o clone local. Não considere os novos testes aprovados até executar a suíte.
 
-Antes da implementação do fluxo CSV, o usuário confirmou 16 testes aprovados e `ruff check .` sem erros. O novo fluxo CSV acrescenta testes que ainda precisam ser executados no clone local; não considere a ampliação validada até obter um novo resultado.
 
 ## Ferramentas externas
 

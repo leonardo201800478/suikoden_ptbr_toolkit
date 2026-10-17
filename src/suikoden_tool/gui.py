@@ -742,7 +742,9 @@ class TranslationApp:
                 continue
             self.visible_entries.append(entry)
             iid = self._iid(entry)
-            snippet = " ".join(self._markers_to_lines(original).split())
+            # A lista pode resumir espaços/quebras para caber na coluna, mas o editor
+            # de entrada exibe o conteúdo completo e literal.
+            snippet = " ".join(original.split())
             if len(snippet) > 95:
                 snippet = snippet[:92] + "..."
             status = entry.get("status")
@@ -813,13 +815,13 @@ class TranslationApp:
 
     @staticmethod
     def _markers_to_lines(value: str) -> str:
-        """Mostra o marcador de quebra de linha do jogo como quebra real no editor."""
-        return value.replace("∠", "\n")
+        """Exibe o texto original literalmente, sem ocultar nem converter marcadores."""
+        return value
 
     @staticmethod
     def _lines_to_markers(value: str) -> str:
-        """Converte quebras editadas para o marcador exigido pelo formato do jogo."""
-        return value.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "∠")
+        """Preserva literalmente o texto digitado, incluindo marcadores e quebras reais."""
+        return value
 
     @staticmethod
     def _set_text(widget: tk.Text, value: str, readonly: bool = False) -> None:

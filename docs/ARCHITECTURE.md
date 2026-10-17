@@ -19,7 +19,9 @@ O pacote usa a estrutura `src/`:
 | `inspect` | Um bundle | Cabeçalho/metadados e hash | Não interpreta todos os objetos internos. |
 | `inventory` | Diretório | Inventário recursivo JSON | Não extrai nem classifica texto. |
 | `template` | Jogo selecionado | Modelo JSON de tradução | Não representa uma extração real. |
-| `text export` | JSON com `textList` | Catálogo traduzível JSON | Não extrai do bundle; reexportação não preserva traduções existentes. |
+| `text export` | JSON com `textList` + saída opcional existente | Cria/mescla catálogo JSON | Preserva traduções compatíveis; marca origem alterada e IDs órfãos. |
+| `text validate` | Catálogo + fonte opcional | Relatório JSON de erros/avisos | Não modifica arquivos. |
+| `text stats` | Catálogo JSON | Contagem por status e percentual concluído | Não modifica arquivos. |
 
 ## Fluxo pretendido
 
@@ -48,7 +50,7 @@ Importação/reconstrução em cópia de trabalho
 Comparação de integridade + teste no jogo
 ```
 
-Somente a inspeção básica, o inventário, o modelo e a exportação de JSON previamente extraído estão implementados. Extração automatizada, merge seguro, validação avançada, editor e reconstrução ainda são etapas futuras.
+A inspeção básica, o inventário, o modelo, a exportação de JSON previamente extraído, a mesclagem segura, a validação estrutural e as estatísticas estão implementados. Extração automatizada, validação semântica de tokens, editor e reconstrução ainda são etapas futuras.
 
 ## Ferramentas externas
 
@@ -66,7 +68,7 @@ O `.gitignore` exclui pastas locais dessas ferramentas e extensões binárias co
 6. **Versionamento:** versionar o esquema JSON e criar migrações para mudanças incompatíveis.
 7. **Testes:** incluir casos válidos, inválidos, Unicode, strings vazias, tokens e IDs duplicados.
 8. **Dependências externas:** registrar ferramenta, versão, hash de entrada, parâmetros e resultado.
-9. **Não destrutivo:** nunca substituir silenciosamente um catálogo com traduções existentes.
+9. **Não destrutivo:** mesclar traduções compatíveis; preservar entradas removidas como `orphaned`; marcar mudanças de origem como `needs_review`; abortar se o catálogo existente estiver inválido.
 10. **Documentação para IA:** atualizar `docs/AI_CONTEXT.md`, `docs/AI_PROMPTS.md` e este documento quando a arquitetura ou os comandos mudarem.
 
 ## Descoberta de formatos

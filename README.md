@@ -83,6 +83,8 @@ Estas ferramentas são candidatas para inspecionar assets Unity. Nenhuma delas �
 - [UABEA](https://github.com/nesrak1/UABEA) — inspeção e edição direcionada de assets Unity.
 - [UnityDataTools](https://github.com/Unity-Technologies/UnityDataTools) — ferramentas de análise de dados Unity.
 
+**As distribuições executáveis não são armazenadas no GitHub deste projeto.** Baixe-as das fontes oficiais e, se desejar, mantenha-as localmente em `tools/AssetRipper/`, `tools/UABEA/` e `tools/UnityDataTools/`. Essas pastas são ignoradas pelo Git para evitar binários grandes e dependências de terceiros no histórico. Consulte [configuração das ferramentas externas](docs/EXTERNAL_TOOLS.md).
+
 O cabeçalho `UnityFS` identifica o contêiner, mas **não revela por si só qual objeto contém o texto**, nem garante que um bundle possa ser reconstruído sem perda. A compatibilidade precisa ser testada com a versão real dos arquivos.
 
 ## Plano de desenvolvimento
@@ -96,7 +98,7 @@ O cabeçalho `UnityFS` identifica o contêiner, mas **não revela por si só qua
 7. **Importação/reconstrução:** implementar apenas após identificar o formato e comprovar a preservação dos dados.
 8. **Testes no jogo:** validar cópias de trabalho e manter os originais intactos.
 
-Mais detalhes: [arquitetura e etapas](docs/ARCHITECTURE.md) e [formato de tradução](docs/TRANSLATION_FORMAT.md).
+Mais detalhes: [arquitetura e etapas](docs/ARCHITECTURE.md), [formato de tradução](docs/TRANSLATION_FORMAT.md) e [ferramentas externas](docs/EXTERNAL_TOOLS.md).
 
 ## Princípios de segurança e qualidade
 

@@ -251,17 +251,26 @@ class TranslationApp:
             selectbackground="#484064",
         )
         self.translation_text.grid(row=5, column=0, sticky="nsew")
+        self.translation_text.tag_configure("over_limit", background="#5a252d", foreground="#ffffff")
         self.translation_text.bind("<<Modified>>", self._on_translation_modified)
         right.rowconfigure(5, weight=1)
 
+        self.translation_counter_var = tk.StringVar(
+            value="Limite por linha: 66 caracteres · Marcadores de nome contam como 10."
+        )
+        self.translation_counter = ttk.Label(
+            right, textvariable=self.translation_counter_var, style="Muted.TLabel"
+        )
+        self.translation_counter.grid(row=6, column=0, sticky="ew", pady=(5, 0))
+
         ttk.Label(right, text="CONTEXTO OPCIONAL PARA A SUGESTÃO DE IA", style="Panel.TLabel").grid(
-            row=6, column=0, sticky="w", pady=(12, 5)
+            row=7, column=0, sticky="w", pady=(12, 5)
         )
         self.context_entry = ttk.Entry(right)
-        self.context_entry.grid(row=7, column=0, sticky="ew")
+        self.context_entry.grid(row=8, column=0, sticky="ew")
 
         actions = ttk.Frame(right, style="Panel.TFrame")
-        actions.grid(row=8, column=0, sticky="ew", pady=(14, 0))
+        actions.grid(row=9, column=0, sticky="ew", pady=(14, 0))
         ttk.Button(actions, text="← Anterior", command=self.previous_entry).pack(side="left")
         ttk.Button(actions, text="Próxima pendente →", command=self.next_pending).pack(
             side="left", padx=(7, 0)
@@ -807,6 +816,7 @@ class TranslationApp:
         )
         self.translation_text.edit_modified(False)
         self._loading_entry = False
+        self._update_translation_counter()
         self.context_entry.delete(0, "end")
         if entry.get("previous_original") is not None:
             self.message_var.set("Atenção: a fonte mudou. Compare com o texto anterior antes de revisar.")
@@ -839,9 +849,39 @@ class TranslationApp:
     def _on_translation_modified(self, _event: tk.Event | None = None) -> None:
         if self.translation_text.edit_modified():
             self.translation_text.edit_modified(False)
+            self._update_translation_counter()
             if not self._loading_entry and self.current_id is not None:
                 self.dirty = True
                 self.message_var.set("Alterações não salvas.")
+
+    def _update_translation_counter(self) -> None:
+        """Atualiza a contagem e destaca visualmente as linhas acima de 66 caracteres."""
+        visible_text = self.translation_text.get("1.0", "end-1c")
+        source_text = self._lines_to_markers(visible_text)
+        lengths = self._dialogue_line_lengths(source_text)
+        over_limit = [(line_number, count) for line_number, count in lengths if count > 66]
+
+        self.translation_text.tag_remove("over_limit", "1.0", "end")
+        # A representação visual insere linhas físicas após ∠ e duas após ∨.
+        # Destacar linhas lógicas excedidas sem alterar o conteúdo do widget.
+        logical_line = 1
+        for line_number, count in lengths:
+            if count > 66:
+                index = f"{logical_line}.0"
+                end_index = f"{logical_line}.end"
+                self.translation_text.tag_add("over_limit", index, end_index)
+            logical_line += 1
+
+        if over_limit:
+            details = ", ".join(f"L{line}: {count}/66" for line, count in over_limit)
+            self.translation_counter.configure(foreground="#ff7b86")
+            self.translation_counter_var.set(f"⚠ Linhas acima do limite: {details}")
+        else:
+            self.translation_counter.configure(foreground="#83d6a5")
+            total_lines = len(lengths)
+            self.translation_counter_var.set(
+                f"✓ Todas as {total_lines} linhas dentro do limite de 66 caracteres."
+            )
 
     def _current_entry(self) -> dict[str, Any] | None:
         if self.current_id is None:

@@ -7,12 +7,14 @@ import struct
 from pathlib import Path
 from typing import Any
 
+
 def _read_cstring(data: bytes, offset: int) -> tuple[str, int]:
     """Lê uma string terminada em NUL e retorna (texto, próximo_offset)."""
     end = data.find(b"\0", offset)
     if end < 0:
         raise ValueError("String C não terminada no cabeçalho UnityFS")
     return data[offset:end].decode("utf-8", errors="replace"), end + 1
+
 
 def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
     """Calcula SHA-256 em blocos, evitando carregar o arquivo inteiro na memória."""
@@ -21,6 +23,7 @@ def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
         for chunk in iter(lambda: stream.read(chunk_size), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
 
 def inspect_bundle(path: Path) -> dict[str, Any]:
     """Lê metadados básicos UnityFS sem alterar nem descompactar o arquivo."""
@@ -44,6 +47,7 @@ def inspect_bundle(path: Path) -> dict[str, Any]:
     if len(header) >= offset + 20:
         result["flags"] = struct.unpack_from(">I", header, offset + 16)[0]
     return result
+
 
 def inventory_bundles(root: Path) -> list[dict[str, Any]]:
     """Inspeciona recursivamente arquivos .bundle e retorna inventário ordenado."""

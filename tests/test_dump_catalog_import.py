@@ -61,3 +61,26 @@ def test_import_dump_never_overwrites_existing_catalog(tmp_path):
         import_dump_to_catalog(dump_path)
 
     assert catalog_path.read_text(encoding="utf-8") == '{"keep": true}'
+
+
+
+def test_import_dump_repairs_missing_comma_between_textlist_objects(tmp_path):
+    script = '{"textList": [{"id": 1, "text": "First"} {"id": 2, "text": "Second"}]}'
+    dump_path = make_dump(tmp_path / "text_add_en-CAB-123-9.txt", script)
+
+    result = import_dump_to_catalog(dump_path)
+    catalog = json.loads(Path(result["catalog_path"]).read_text(encoding="utf-8"))
+
+    assert result["entries"] == 2
+    assert [entry["original"] for entry in catalog["entries"]] == ["First", "Second"]
+
+
+def test_import_dump_preserves_control_characters_inside_json_strings(tmp_path):
+    script = '{"textList": [{"id": 1, "text": "Line one\\nLine two"}]}'
+    dump_path = make_dump(tmp_path / "text_gsd1_en-CAB-123-9.txt", script)
+
+    result = import_dump_to_catalog(dump_path)
+    catalog = json.loads(Path(result["catalog_path"]).read_text(encoding="utf-8"))
+
+    assert result["entries"] == 1
+    assert catalog["entries"][0]["original"] == "Line one\\nLine two"

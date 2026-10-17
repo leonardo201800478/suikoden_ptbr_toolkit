@@ -51,6 +51,9 @@ class TranslationBatchTab:
         ttk.Button(
             controls, text="Dividir em lotes", command=self.split_file, style="Accent.TButton"
         ).pack(side="left", padx=(12, 0))
+        ttk.Button(
+            controls, text="Unificar lotes traduzidos…", command=self.merge_batches
+        ).pack(side="left", padx=(8, 0))
 
         self.file_var = tk.StringVar(value="Nenhum arquivo selecionado.")
         ttk.Label(frame, textvariable=self.file_var, style="Muted.TLabel", wraplength=1100).grid(
@@ -133,6 +136,139 @@ class TranslationBatchTab:
         self.file_var.set(f"Arquivo: {path}  ·  {len(entries):,} entradas  ·  IDs únicos")
         self.status_var.set("Arquivo validado. Escolha a quantidade de entradas por lote.")
         self.tree.delete(*self.tree.get_children())
+
+    def merge_batches(self) -> None:
+        """Mescla os textos traduzidos nos objetos originais, usando IDs como chave."""
+        source_filename = filedialog.askopenfilename(
+            title="Selecionar JSON original completo",
+            filetypes=(("Arquivos JSON", "*.json"), ("Todos os arquivos", "*.*")),
+        )
+        if not source_filename:
+            return
+        source_path = Path(source_filename)
+        try:
+            source_data = json.loads(source_path.read_text(encoding="utf-8-sig"))
+            source_entries = source_data.get("textList") if isinstance(source_data, dict) else None
+            if not isinstance(source_entries, list) or not source_entries:
+                raise ValueError('O JSON original deve conter uma lista "textList" não vazia.')
+            original_by_id: dict[tuple[type, Any], dict[str, Any]] = {}
+            for entry in source_entries:
+                if not isinstance(entry, dict) or "id" not in entry or "text" not in entry:
+                    raise ValueError("Todas as entradas originais devem conter id e text.")
+                entry_id = entry["id"]
+                if isinstance(entry_id, bool) or not isinstance(entry_id, (int, str)):
+                    raise ValueError("Os IDs originais devem ser inteiros ou strings.")
+                key = (type(entry_id), entry_id)
+                if key in original_by_id:
+                    raise ValueError(f"ID duplicado no arquivo original: {entry_id!r}.")
+                original_by_id[key] = entry
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+            messagebox.showerror("JSON original inválido", str(exc), parent=self.parent)
+            return
+
+        batch_dirname = filedialog.askdirectory(
+            title="Selecionar pasta com os lotes JSON traduzidos",
+            initialdir=str(source_path.parent),
+        )
+        if not batch_dirname:
+            return
+        batch_dir = Path(batch_dirname)
+        batch_paths = sorted(
+            path for path in batch_dir.glob("lote_*.json")
+            if path.is_file() and path.name != "manifest_lotes.json"
+        )
+        if not batch_paths:
+            messagebox.showerror(
+                "Lotes não encontrados",
+                "A pasta selecionada não contém arquivos lote_*.json.",
+                parent=self.parent,
+            )
+            return
+
+        translated_by_id: dict[tuple[type, Any], str] = {}
+        errors: list[str] = []
+        for batch_path in batch_paths:
+            try:
+                batch_data = json.loads(batch_path.read_text(encoding="utf-8-sig"))
+                batch_entries = batch_data.get("textList") if isinstance(batch_data, dict) else None
+                if not isinstance(batch_entries, list):
+                    raise ValueError('não contém uma lista "textList".')
+                for entry in batch_entries:
+                    if not isinstance(entry, dict) or "id" not in entry or "text" not in entry:
+                        raise ValueError("há uma entrada sem id ou text.")
+                    entry_id = entry["id"]
+                    if isinstance(entry_id, bool) or not isinstance(entry_id, (int, str)):
+                        raise ValueError(f"ID com tipo inválido: {entry_id!r}.")
+                    key = (type(entry_id), entry_id)
+                    if key not in original_by_id:
+                        errors.append(f"{batch_path.name}: ID extra {entry_id!r}.")
+                        continue
+                    if key in translated_by_id:
+                        errors.append(f"{batch_path.name}: ID duplicado entre lotes {entry_id!r}.")
+                        continue
+                    if not isinstance(entry["text"], str):
+                        errors.append(f"{batch_path.name}: text não é string para ID {entry_id!r}.")
+                        continue
+                    translated_by_id[key] = entry["text"]
+            except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+                errors.append(f"{batch_path.name}: {exc}")
+
+        missing = [
+            entry["id"] for entry in source_entries
+            if (type(entry["id"]), entry["id"]) not in translated_by_id
+        ]
+        if missing:
+            errors.append(
+                "IDs ausentes nos lotes: " + ", ".join(map(str, missing[:40]))
+                + ("…" if len(missing) > 40 else "") + "."
+            )
+        if errors:
+            messagebox.showerror(
+                "Unificação bloqueada",
+                "Os lotes não correspondem exatamente ao catálogo original. "
+                "Nenhum arquivo unificado foi criado.\n\n"
+                + "\n".join(errors[:30])
+                + (f"\n… e mais {len(errors) - 30} problema(s)." if len(errors) > 30 else ""),
+                parent=self.parent,
+            )
+            return
+
+        output_path = filedialog.asksaveasfilename(
+            title="Salvar JSON completo traduzido",
+            initialdir=str(source_path.parent),
+            initialfile=f"{source_path.stem}_ptbr.json",
+            defaultextension=".json",
+            filetypes=(("Arquivos JSON", "*.json"),),
+        )
+        if not output_path:
+            return
+
+        merged_data = dict(source_data)
+        merged_entries: list[dict[str, Any]] = []
+        for original_entry in source_entries:
+            entry = dict(original_entry)
+            key = (type(entry["id"]), entry["id"])
+            entry["text"] = translated_by_id[key]
+            merged_entries.append(entry)
+        merged_data["textList"] = merged_entries
+        try:
+            Path(output_path).write_text(
+                json.dumps(merged_data, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+                newline="\n",
+            )
+        except (OSError, TypeError, ValueError) as exc:
+            messagebox.showerror("Falha ao salvar JSON unificado", str(exc), parent=self.parent)
+            return
+
+        messagebox.showinfo(
+            "Unificação concluída",
+            f"Arquivo completo criado com {len(merged_entries)} entradas.\n"
+            f"Todos os IDs foram conferidos e os textos foram associados por ID.\n"
+            f"Arquivo: {output_path}\n\n"
+            "O arquivo original e os lotes não foram alterados.",
+            parent=self.parent,
+        )
 
     def split_file(self) -> None:
         if self.source_path is None or not self.entries:

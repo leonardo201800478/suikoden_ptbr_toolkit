@@ -815,14 +815,14 @@ class TranslationApp:
 
     @staticmethod
     def _markers_to_lines(value: str) -> str:
-        """Exibe o marcador ∠ e usa uma quebra visual real depois dele."""
-        return value.replace("∠", "∠\\n")
+        """Exibe o marcador ∠ seguido de uma quebra de linha real."""
+        return value.replace("∠", "∠\n")
 
     @staticmethod
     def _lines_to_markers(value: str) -> str:
-        """Remove somente as quebras visuais imediatamente posteriores a ∠."""
-        value = value.replace("∠\\r\\n", "∠").replace("∠\\n", "∠")
-        # Não converter quebras reais independentes em marcadores: isso alteraria o texto.
+        """Remove a quebra real de exibição colocada imediatamente após ∠."""
+        value = value.replace("∠\r\n", "∠").replace("∠\n", "∠")
+        # Preserva quaisquer outras quebras e caracteres digitados pelo usuário.
         return value
 
     @staticmethod

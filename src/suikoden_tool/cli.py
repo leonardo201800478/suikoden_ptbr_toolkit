@@ -11,6 +11,7 @@ from suikoden_tool.text_catalog import (
     export_text_catalog,
     validate_catalog,
 )
+from suikoden_tool.text_batch import export_translation_batch, import_translation_batch
 from suikoden_tool.translation_schema import make_translation_entry
 
 
@@ -54,6 +55,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = text_subcommands.add_parser("stats", help="Mostra estatísticas do catálogo")
     p.add_argument("--input", required=True, type=Path, help="Catálogo JSON")
+
+    p = text_subcommands.add_parser("batch-export", help="Exporta lote de tradução para CSV")
+    p.add_argument("--input", required=True, type=Path, help="Catálogo JSON")
+    p.add_argument("--output", required=True, type=Path, help="CSV de saída compatível com Excel")
+    p.add_argument("--limit", type=int, default=100, help="Máximo de entradas (padrão: 100)")
+    p.add_argument(
+        "--pending-only",
+        action="store_true",
+        help="Exporta apenas entradas pending, sem needs_review",
+    )
+
+    p = text_subcommands.add_parser("batch-import", help="Importa traduções de CSV para o catálogo")
+    p.add_argument("--input", required=True, type=Path, help="CSV preenchido")
+    p.add_argument("--catalog", required=True, type=Path, help="Catálogo JSON a atualizar")
     return parser
 
 
@@ -89,6 +104,19 @@ def main() -> None:
         elif args.command == "text" and args.text_command == "stats":
             stats = catalog_stats(_read_json(args.input))
             print(json.dumps(stats, ensure_ascii=False, indent=2))
+        elif args.command == "text" and args.text_command == "batch-export":
+            result = export_translation_batch(
+                args.input,
+                args.output,
+                limit=args.limit,
+                include_needs_review=not args.pending_only,
+            )
+            print(f"Entradas exportadas: {result['exported']} de {result['available']}.")
+            print(f"CSV: {args.output.resolve()}")
+        elif args.command == "text" and args.text_command == "batch-import":
+            result = import_translation_batch(args.catalog, args.input)
+            print(f"Traduções importadas: {result['updated']}.")
+            print(f"Linhas vazias ignoradas: {result['skipped_empty']}.")
         else:
             payload = {
                 "schema_version": 1,

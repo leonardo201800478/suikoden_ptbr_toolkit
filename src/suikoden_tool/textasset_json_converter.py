@@ -123,10 +123,10 @@ def convert_textasset_batch(
     # Log persistente para diagnóstico; o contexto já vem escapado e não altera a origem.
     log_path = output_dir / "logs" / "conversao_textasset.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    with log_path.open("w", encoding="utf-8", newline="\\n") as log_file:
+    with log_path.open("w", encoding="utf-8", newline="\n") as log_file:
         for item in results:
             if "batch_errors" not in item:
-                log_file.write(json.dumps({"status": "ok", **item}, ensure_ascii=False) + "\\n")
+                log_file.write(json.dumps({"status": "ok", **item}, ensure_ascii=False) + "\n")
         for error in errors:
             log_file.write(json.dumps({"status": "error", **error}, ensure_ascii=False) + "\\n")
     # Mantém retorno dos sucessos e erros estruturados para a GUI/CLI.

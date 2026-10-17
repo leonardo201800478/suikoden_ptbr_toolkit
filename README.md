@@ -19,7 +19,9 @@ Toolkit em Python para investigar recursos da versão Windows de **Suikoden I & 
 - `suikoden-tool inventory`: inventaria recursivamente bundles de uma pasta.
 - `suikoden-tool template`: gera um modelo inicial de tradução.
 - `suikoden-tool text export`: converte um JSON com a estrutura `{"textList":[{"id":1,"text":"..."}]}` em um catálogo traduzível.
-- Testes automatizados para exportação, preservação de texto e validação de entradas.
+- `suikoden-tool text validate` e `text stats`: validam e acompanham o progresso do catálogo.
+- `suikoden-tool text batch-export` e `text batch-import`: exportam/importam lotes CSV compatíveis com Excel, validando IDs e textos originais.
+- Testes automatizados para exportação, preservação de texto, validação e fluxo CSV.
 
 O comando `text export` **não extrai o TextAsset diretamente do bundle**. A extração do objeto foi feita durante a investigação com UnityDataTool; o comando recebe o JSON já extraído. Se o catálogo de saída já existir, a exportação mescla os dados com segurança.
 

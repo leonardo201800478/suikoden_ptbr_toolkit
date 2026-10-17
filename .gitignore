@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+output/
+work/
+*.backup
+# Metadados gerados durante a instala��o
+*.egg-info/

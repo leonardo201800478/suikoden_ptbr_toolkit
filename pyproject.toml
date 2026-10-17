@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "suikoden-ptbr-toolkit"
+version = "0.1.0"
+description = "Ferramentas de análise e localização PT-BR para Suikoden I & II HD Remaster"
+requires-python = ">=3.11"
+dependencies = []
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.9"]
+[project.scripts]
+suikoden-tool = "suikoden_tool.cli:main"
+[tool.setuptools.packages.find]
+where = ["src"]
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+[tool.ruff]
+line-length = 100
+target-version = "py311"

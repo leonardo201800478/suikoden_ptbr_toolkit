@@ -96,9 +96,14 @@ suikoden-tool text stats --input work\\bundle_analysis\\catalogo_pt_br.json
 
 ```powershell
 python -m pytest -q
+ruff check .
 suikoden-tool --help
 suikoden-tool text export --help
+suikoden-tool text validate --help
+suikoden-tool text stats --help
 ```
+
+Execute esses comandos na branch atual após atualizar o clone local. Não considere os novos testes aprovados até executar a suíte.
 
 A validação registrada na branch `feature/text-catalog-export` resultou em 4 testes aprovados no ambiente de desenvolvimento do projeto. Execute novamente os testes após qualquer alteração.
 

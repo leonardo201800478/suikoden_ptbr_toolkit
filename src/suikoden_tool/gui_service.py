@@ -78,7 +78,7 @@ def suggest_translation(original: str, context: str = "", api_key: str | None = 
     api_key = (api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
     if not api_key:
         raise ValueError(
-            "OPENAI_API_KEY não configurada. Defina a variável de ambiente e reabra a ferramenta."
+            "Chave da API OpenAI não configurada. Informe-a na guia 'Extração dos 4 bundles' ou defina OPENAI_API_KEY."
         )
     model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
     prompt = (

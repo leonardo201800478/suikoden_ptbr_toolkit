@@ -57,8 +57,18 @@ class TranslationApp:
         self._bind_events()
         self.game_directory_var.set(self.game_directory)
         self._refresh_game_directory_status()
-        if catalog_path:
-            self.open_catalog(catalog_path)
+        startup_catalog = catalog_path
+        if startup_catalog is None:
+            remembered = self.settings.get("last_catalog_path", "")
+            if remembered:
+                startup_catalog = Path(remembered)
+        if startup_catalog is not None:
+            if startup_catalog.is_file():
+                self.open_catalog(startup_catalog)
+            elif not catalog_path:
+                self.message_var.set(
+                    "O último catálogo salvo não foi encontrado. Abra o catálogo novamente."
+                )
 
     def _configure_style(self) -> None:
         style = ttk.Style(self.root)
@@ -269,7 +279,8 @@ class TranslationApp:
         """Valida e persiste a pasta do jogo como caminho absoluto."""
         try:
             directory = validate_game_directory(self.game_directory_var.get())
-            save_settings({"game_directory": str(directory)})
+            self.settings["game_directory"] = str(directory)
+            save_settings(self.settings)
         except (OSError, ValueError) as exc:
             messagebox.showerror("Pasta do jogo inválida", str(exc), parent=self.root)
             return
@@ -315,7 +326,9 @@ class TranslationApp:
         except (OSError, ValueError) as exc:
             messagebox.showerror("Não foi possível abrir", str(exc), parent=self.root)
             return
-        self.catalog_path = path
+        self.catalog_path = path.resolve()
+        self.settings["last_catalog_path"] = str(self.catalog_path)
+        save_settings(self.settings)
         self.catalog = catalog
         self.entries = catalog["entries"]
         self.current_id = None
@@ -356,7 +369,7 @@ class TranslationApp:
                 continue
             self.visible_entries.append(entry)
             iid = self._iid(entry)
-            snippet = " ".join(original.split())
+            snippet = " ".join(self._markers_to_lines(original).split())
             if len(snippet) > 95:
                 snippet = snippet[:92] + "..."
             status = entry.get("status")
@@ -404,15 +417,19 @@ class TranslationApp:
         self.entry_meta.configure(
             text=f"ID: {entry['id']}   ·   Status: {entry['status']}   ·   Recurso: {self.catalog.get('resource', '-')}"
         )
-        original_display = entry.get("original", "")
+        original_display = self._markers_to_lines(entry.get("original", ""))
         previous_original = entry.get("previous_original")
+        if previous_original is not None:
+            previous_original = self._markers_to_lines(previous_original)
         if previous_original is not None:
             original_display = (
                 f"[TEXTO ATUAL]\n{original_display}\n\n"
                 f"[TEXTO ANTERIOR — REVISAR]\n{previous_original}"
             )
         self._set_text(self.original_text, original_display, readonly=True)
-        self._set_text(self.translation_text, entry.get("translation", ""))
+        self._set_text(
+            self.translation_text, self._markers_to_lines(entry.get("translation", ""))
+        )
         self.translation_text.edit_modified(False)
         self._loading_entry = False
         self.context_entry.delete(0, "end")
@@ -420,6 +437,16 @@ class TranslationApp:
             self.message_var.set("Atenção: a fonte mudou. Compare com o texto anterior antes de revisar.")
         else:
             self.message_var.set("Edição não salva." if entry.get("status") == "pending" else "Entrada carregada.")
+
+    @staticmethod
+    def _markers_to_lines(value: str) -> str:
+        """Mostra o marcador de quebra de linha do jogo como quebra real no editor."""
+        return value.replace("∠", "\n")
+
+    @staticmethod
+    def _lines_to_markers(value: str) -> str:
+        """Converte quebras editadas para o marcador exigido pelo formato do jogo."""
+        return value.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "∠")
 
     @staticmethod
     def _set_text(widget: tk.Text, value: str, readonly: bool = False) -> None:
@@ -453,7 +480,9 @@ class TranslationApp:
         if entry is None or self.catalog_path is None:
             messagebox.showinfo("Selecione uma entrada", "Abra um catálogo e selecione uma entrada.")
             return
-        translation = self.translation_text.get("1.0", "end-1c")
+        translation = self._lines_to_markers(
+            self.translation_text.get("1.0", "end-1c")
+        )
         try:
             saved = save_entry(self.catalog_path, entry["id"], translation, status)
         except (OSError, ValueError) as exc:

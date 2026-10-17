@@ -328,7 +328,14 @@ class TranslationApp:
         self.entry_meta.configure(
             text=f"ID: {entry['id']}   ·   Status: {entry['status']}   ·   Recurso: {self.catalog.get('resource', '-')}"
         )
-        self._set_text(self.original_text, entry.get("original", ""), readonly=True)
+        original_display = entry.get("original", "")
+        previous_original = entry.get("previous_original")
+        if previous_original is not None:
+            original_display = (
+                f"[TEXTO ATUAL]\n{original_display}\n\n"
+                f"[TEXTO ANTERIOR — REVISAR]\n{previous_original}"
+            )
+        self._set_text(self.original_text, original_display, readonly=True)
         self._set_text(self.translation_text, entry.get("translation", ""))
         self.translation_text.edit_modified(False)
         self._loading_entry = False

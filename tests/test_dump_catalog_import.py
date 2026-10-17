@@ -83,4 +83,4 @@ def test_import_dump_preserves_control_characters_inside_json_strings(tmp_path):
     catalog = json.loads(Path(result["catalog_path"]).read_text(encoding="utf-8"))
 
     assert result["entries"] == 1
-    assert catalog["entries"][0]["original"] == "Line one\\nLine two"
+    assert catalog["entries"][0]["original"] == "Line one\nLine two"

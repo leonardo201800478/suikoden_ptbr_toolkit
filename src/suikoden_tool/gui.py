@@ -427,19 +427,26 @@ class TranslationApp:
                 safe_name = "".join(
                     char if char.isalnum() or char in "-_." else "_" for char in selected["name"]
                 )
-                source_json = output_dir / "sources" / f"{bundle.stem}__{safe_name}.json"
-                catalog_json = output_dir / "catalogs" / f"{bundle.stem}__{safe_name}_pt_br.json"
+                entry_name = selected.get("entry")
+                safe_entry = "".join(
+                    char if char.isalnum() or char in "-_." else "_"
+                    for char in (entry_name or "default")
+                )
+                source_json = output_dir / "sources" / f"{bundle.stem}__{safe_entry}__{safe_name}.json"
+                catalog_json = output_dir / "catalogs" / f"{bundle.stem}__{safe_entry}__{safe_name}_pt_br.json"
                 extract_textasset_json(
                     bundle, source_json, executable=executable,
-                    asset_name=selected["name"], force=True,
+                    entry=entry_name, asset_name=selected["name"], force=True,
                 )
                 export_text_catalog(source_json, catalog_json, target_language="pt-BR")
                 count = selected.get("textlist_count") or 0
                 results.append((bundle, catalog_json, selected["name"], count))
                 self.root.after(
                     0,
-                    lambda b=bundle.name, a=selected["name"], n=count:
-                    self._append_extraction_log(f"OK: {b} → recurso '{a}', {n} entradas."),
+                    lambda b=bundle.name, a=selected["name"], n=count, e=entry_name:
+                    self._append_extraction_log(
+                        f"OK: {b} → entrada '{e or 'única'}', recurso '{a}', {n} entradas."
+                    ),
                 )
             except (OSError, ValueError, json.JSONDecodeError) as exc:
                 errors.append(f"{bundle.name}: {exc}")

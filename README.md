@@ -56,6 +56,10 @@ O carregamento não traduz nem reescreve os JSONs de origem. Os campos `text` s�
 sem substituir marcadores como `∠`, `∨`, `♂㈱`, `◎1` ou o caractere `?`.
 Os JSONs preparados não são arquivos para importar diretamente no UABEA; são fontes para o catálogo de edição.
 
+## Divisão de arquivos em lotes
+
+A guia **Lotes de tradução** divide JSONs `textList` em arquivos menores, preservando os IDs originais. O padrão é 100 entradas por lote, configurável entre 1 e 200. Os lotes ficam em `lotes_traducao/<nome-integral-do-arquivo-de-origem>/`, separados dos catálogos completos. Consulte [Fluxo de lotes e prompts de tradução](docs/FLUXO_LOTES_E_PROMPTS_TRADUCAO.md) para os procedimentos, prompts de tradução e auditoria por ID. A interface divide os arquivos, mas ainda não reúne automaticamente os lotes traduzidos.
+
 ## Limite de caracteres nas caixas de diálogo
 
 A interface valida o texto digitado antes de salvar. **Cada linha exibida deve ter no máximo 66 caracteres**; se alguma linha ultrapassar o limite, o salvamento é interrompido e a ferramenta informa o número da linha e a contagem encontrada.

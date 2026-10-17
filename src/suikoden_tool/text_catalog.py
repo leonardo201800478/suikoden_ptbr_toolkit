@@ -238,8 +238,14 @@ def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]
         translation = entry.get("translation")
         if isinstance(translation, str) and not translation.strip():
             warnings.append(f"Entrada {entry_id!r}: tradução pendente.")
+        if "source_changed" in entry and not isinstance(entry["source_changed"], bool):
+            errors.append(f"Entrada {entry_id!r}: 'source_changed' precisa ser booleano.")
+        if "previous_original" in entry and not isinstance(entry["previous_original"], str):
+            errors.append(f"Entrada {entry_id!r}: 'previous_original' precisa ser string.")
         if entry.get("source_changed") is True:
             warnings.append(f"Entrada {entry_id!r}: texto de origem mudou; revisar tradução.")
+        if status == "pending" and isinstance(translation, str) and translation.strip():
+            warnings.append(f"Entrada {entry_id!r}: tradução preenchida, mas status ainda é pending.")
         if status == "translated" and isinstance(translation, str) and not translation.strip():
             errors.append(f"Entrada {entry_id!r}: status translated exige tradução não vazia.")
         if status == "reviewed" and isinstance(translation, str) and not translation.strip():
@@ -285,10 +291,7 @@ def catalog_stats(catalog: Any) -> dict[str, Any]:
         status = entry.get("status")
         if not isinstance(status, str) or status not in VALID_STATUSES:
             raise ValueError(f"Entrada {index} tem status inválido: {status!r}.")
-        if status == "pending" and isinstance(entry.get("translation"), str) and entry["translation"].strip():
-            counts["translated"] += 1
-        else:
-            counts[status] += 1
+        counts[status] += 1
     total = len(catalog["entries"])
     return {"total": total, **counts, "completion_percent": round(
         100 * (total - counts["pending"] - counts["needs_review"] - counts["orphaned"]) / total, 1

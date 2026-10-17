@@ -32,20 +32,20 @@ Este documento registra observações fornecidas durante a inspeção dos dumps 
 
 ## Suikoden II
 
-Os itens abaixo são observações preliminares. Os símbolos aparecem em contextos específicos, mas a sua função interna ainda não foi identificada. **Não os traduzir, remover ou reinterpretar automaticamente.**
+Os itens abaixo são observações preliminares. **A busca posterior nos arquivos disponíveis não encontrou ocorrências de `♂▼n`**. Portanto, as referências a esse padrão não são evidência de que ele esteja presente nos dumps examinados e não devem ser tratadas como tokens existentes até que um exemplo concreto seja localizado.
 
-| Elemento no dump/JSON | Contexto observado / hipótese | Regra para a ferramenta |
+| Elemento | Estado da evidência | Regra para a ferramenta |
 |---|---|---|
-| `♂▼0`, `♂▼1`, `♂▼2` … até `♂▼7` | Aparecem no início de frases em diálogos de batalha. A função é desconhecida. | Preservar o token completo, incluindo o número. Tratar a lista de 0 a 7 como observação, não como significado decodificado. |
-| `♂▼1` … até `♂▼7` | Também aparecem em diálogos do tutorial de pesca. A função exata não está confirmada. | Preservar a sequência integral e o número; não assumir que a função é igual à dos diálogos de batalha apenas por compartilhar o prefixo. |
-| `♂㈱` | Token do nome do protagonista de Suikoden II. | Preservar a sequência exata, sem separar ou substituir caracteres. |
-| `♂②` | Token do nome do exército em Suikoden II. | Preservar a sequência exata. |
-| `♂①` | Token do nome do castelo em Suikoden II. | Preservar a sequência exata. |
+| `♂▼0` até `♂▼7` | Não encontrado em nenhum arquivo examinado. A hipótese anterior de que apareceria no início de frases em diálogos de batalha não está confirmada pelos arquivos. | Não adicionar à lista de tokens encontrados nem implementar regra de parsing específica sem evidência. |
+| `♂▼1` até `♂▼7` em tutorial de pesca | Não encontrado em nenhum arquivo examinado. A hipótese anterior sobre diálogos de tutorial de pesca também não está confirmada pelos arquivos. | Não registrar como ocorrência real; reavaliar apenas se for fornecido um exemplo verificável. |
+| `♂㈱` | Token do nome do protagonista de Suikoden II, conforme a observação fornecida. | Preservar a sequência exata, sem separar ou substituir caracteres. |
+| `♂②` | Token do nome do exército em Suikoden II, conforme a observação fornecida. | Preservar a sequência exata. |
+| `♂①` | Token do nome do castelo em Suikoden II, conforme a observação fornecida. | Preservar a sequência exata. |
 | `◎2`, `◎1` etc. | Indicadores ordinais: primeiro, segundo e assim por diante, conforme a observação fornecida. | Preservar o símbolo e o número. Não substituir por números ordinais localizados sem confirmar como o jogo interpreta esses marcadores. |
 
-### Nota sobre `♂▼n`
+### Nota de auditoria
 
-O prefixo `♂▼` acompanhado de um algarismo foi observado em pelo menos dois contextos: falas de batalha e tutorial de pesca. Como a função não é conhecida, não se deve concluir que sejam códigos de personagem, animação, voz, velocidade, seleção de linha ou qualquer outra coisa sem evidência. Para investigar, registrar exemplos concretos com ID, texto anterior/posterior e captura de tela do jogo quando possível.
+Não documentar um token como presente apenas com base numa hipótese de interpretação ou numa lembrança do contexto. Para adicionar um padrão à lista de ocorrências verificadas, registrar pelo menos o arquivo de origem e a string exata (idealmente também o ID). Ausência nos arquivos examinados significa apenas que a busca não encontrou correspondência nesses arquivos; não prova que o padrão seja impossível em outros recursos do jogo.
 
 ## Cuidado com escapes JSON
 
@@ -65,7 +65,7 @@ Não comparar apenas a aparência bruta do arquivo JSON para decidir se a string
 4. **Tokens por jogo:** manter listas separadas para Suikoden I e II, distinguindo tokens confirmados de símbolos com função desconhecida.
 5. **Validação contextual:** validar sequências conhecidas sem alterá-las automaticamente. Não exigir que um símbolo tenha apenas uma função em todos os contextos.
 6. **Relatório de diferenças:** ao detectar alterações em símbolos, espaços, escapes ou caracteres Unicode, informar o ID e os valores antes/depois. Não aplicar reparos automáticos.
-7. **Evidências:** registrar exemplos com ID, string original, contexto (batalha, pesca, menu etc.) e captura de tela ou teste no jogo, quando disponíveis.
+7. **Evidências:** registrar exemplos com arquivo, ID, string original, contexto (batalha, pesca, menu etc.) e captura de tela ou teste no jogo, quando disponíveis.
 
 ## Nível de certeza
 

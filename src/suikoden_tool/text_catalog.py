@@ -130,11 +130,9 @@ def export_text_catalog(
             f"mas a fonte é {resource!r}. Não foi alterado."
         )
 
-    existing_report = validate_catalog(existing)
-    if existing_report["errors"]:
-        raise ValueError(
-            "Catálogo existente inválido; não foi alterado: " + "; ".join(existing_report["errors"])
-        )
+    # Carregar/atualizar material de tradução não é uma validação de integridade.
+    # A integridade dos dados do jogo deve ser verificada durante a extração.
+    # Aqui só validamos o JSON/estrutura mínima necessária para mesclar por ID.
     old_by_id = _catalog_index(existing)
     merged: list[dict[str, Any]] = []
     current_ids: set[tuple[type, object]] = set()

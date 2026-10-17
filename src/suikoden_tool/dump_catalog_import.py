@@ -29,7 +29,7 @@ def _load_textasset_payload(script: str) -> Any:
             if in_string:
                 if escaped:
                     escaped = False
-                elif char == "\\\\":
+                elif char == "\\":
                     escaped = True
                 elif char == '"':
                     in_string = False
@@ -121,7 +121,7 @@ def import_dump_to_catalog(dump_path: Path, output_path: Path | None = None) -> 
     if destination.exists():
         raise FileExistsError(
             f"O catálogo já existe e não será sobrescrito: {destination}. "
-            "Escolha outro destino ou mova el catálogo existente."
+            "Escolha outro destino ou mova o catálogo existente."
         )
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f".{destination.name}.tmp")

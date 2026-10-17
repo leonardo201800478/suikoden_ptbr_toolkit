@@ -65,7 +65,13 @@ def validate_game_directory(value: str | Path) -> Path:
 
 def find_game_assets_directory(game_directory: Path) -> Path:
     """Resolve a pasta Addressables do jogo a partir da instalação selecionada."""
-    expected = game_directory / "Suikoden I and II HD Remaster_Data" / "StreamingAssets" / "aa" / "StandaloneWindows64"
+    expected = (
+        game_directory
+        / "Suikoden I and II HD Remaster_Data"
+        / "StreamingAssets"
+        / "aa"
+        / "StandaloneWindows64"
+    )
     if expected.is_dir():
         return expected
     for candidate in game_directory.glob("*_Data/StreamingAssets/aa/StandaloneWindows64"):

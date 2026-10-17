@@ -815,13 +815,15 @@ class TranslationApp:
 
     @staticmethod
     def _markers_to_lines(value: str) -> str:
-        """Exibe o marcador ∠ seguido de uma quebra de linha real."""
-        return value.replace("∠", "∠\n")
+        """Exibe ∠ com uma quebra e ∨ com duas quebras visuais."""
+        return value.replace("∠", "∠\n").replace("∨", "∨\n\n")
 
     @staticmethod
     def _lines_to_markers(value: str) -> str:
         """Remove a quebra real de exibição colocada imediatamente após ∠."""
         value = value.replace("∠\r\n", "∠").replace("∠\n", "∠")
+        # Remove apenas as duas quebras visuais adicionadas após o marcador de caixa.
+        value = value.replace("∨\r\n\r\n", "∨").replace("∨\n\n", "∨")
         # Preserva quaisquer outras quebras e caracteres digitados pelo usuário.
         return value
 

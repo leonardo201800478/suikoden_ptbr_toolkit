@@ -16,6 +16,45 @@ from typing import Any, Iterable
 
 from suikoden_tool.unity_text_extractor import _dump_textasset_fields
 
+def _loads_textasset_json(script: str) -> Any:
+    """Carrega JSON de TextAsset escapando controles crus dentro de strings.
+
+    UnityDataTool pode emitir caracteres U+0000..U+001F literalmente dentro dos
+    valores. Escapá-los para o parser JSON preserva o caractere no texto resultante.
+    Não altera '?' nem outros caracteres imprimíveis.
+    """
+    try:
+        return json.loads(script)
+    except json.JSONDecodeError as original_error:
+        repaired: list[str] = []
+        in_string = False
+        escaped = False
+        changed = False
+        for char in script:
+            code = ord(char)
+            if in_string and code < 0x20:
+                repaired.append(f"\\u{code:04x}")
+                changed = True
+                escaped = False
+                continue
+            repaired.append(char)
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+            elif char == '"':
+                in_string = True
+        if changed:
+            try:
+                return json.loads("".join(repaired))
+            except json.JSONDecodeError:
+                pass
+        raise original_error
+
+
 DEFAULT_BUNDLE_NAMES = (
     "03cf0288ba3ecaca0776d7fadf1f0bb6.bundle",
     "0573e2f60d0cda7892d60f38dfd7282c.bundle",
@@ -174,7 +213,16 @@ def extract_from_bundles(
                     continue
 
                 try:
-                    payload = json.loads(script)
+                    payload = _loads_textasset_json(script)
+                    if not isinstance(payload, dict) or not isinstance(payload.get("textList"), list):
+                        diagnostics.append({
+                            "bundle": bundle_name,
+                            "asset_path": asset_path,
+                            "object_path_id": object_id,
+                            "asset_name": asset_name,
+                            "info": "TextAsset ignorado: não contém objeto JSON com lista textList.",
+                        })
+                        continue
                     pairs = extract_id_text_pairs(payload)
                 except json.JSONDecodeError as exc:
                     # Alguns dumps podem conter JSON parcial/serialização com escapes inválidos.

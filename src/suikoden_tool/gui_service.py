@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from typing import Any
 
 from suikoden_tool.text_catalog import catalog_stats, validate_catalog
 

@@ -70,7 +70,7 @@ Detalhes, hashes e limitações: `docs/REVERSE_ENGINEERING_LOG.md`.
 
 ## Linha de base conhecida
 
-Antes desta ampliação, o usuário executou com sucesso `text export` e `python -m pytest -q`, com 4 testes aprovados na versão anterior. A nova implementação adiciona mesclagem, validação, estatísticas e testes de regressão; esses novos testes precisam ser executados localmente antes de declarar a alteração validada.
+Antes do fluxo CSV, o usuário executou `python -m pytest -q` com 16 testes aprovados e `ruff check .` sem erros. A implementação CSV adiciona 7 casos de teste (incluindo três cenários de importação inválida); esses testes precisam ser executados no clone local antes de declarar a nova etapa validada.
 
 Comandos para validar a versão atual:
 - `python -m pytest -q`

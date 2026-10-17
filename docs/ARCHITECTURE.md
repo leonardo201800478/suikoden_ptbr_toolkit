@@ -2,14 +2,24 @@
 
 ## Estado atual
 
-O pacote usa uma estrutura `src/`:
+O pacote usa a estrutura `src/`:
 
-- `src/suikoden_tool/bundle_inspector.py`: inspeção não destrutiva do cabeçalho UnityFS, hash SHA-256 e inventário recursivo.
-- `src/suikoden_tool/translation_schema.py`: construtor de uma entrada de tradução com metadados iniciais.
-- `src/suikoden_tool/cli.py`: interface de linha de comando (`inspect`, `inventory`, `template`).
-- `tests/`: testes automatizados.
-- `data/translations_template.json`: modelo vazio para iniciar o trabalho de tradução.
-- `tools/` (opcional e local): distribuições de ferramentas externas para investigação de assets; as pastas de ferramentas são ignoradas pelo Git e não são dependências de instalação do pacote.
+- `src/suikoden_tool/bundle_inspector.py`: inspeção de cabeçalho UnityFS, SHA-256 e inventário recursivo.
+- `src/suikoden_tool/translation_schema.py`: construtor de uma entrada para o esquema inicial de tradução.
+- `src/suikoden_tool/cli.py`: CLI com `inspect`, `inventory`, `template` e `text export`.
+- `tests/`: testes automatizados, incluindo exportação de catálogos.
+- `data/`: modelos iniciais versionáveis.
+- `work/`: resultados locais de investigação; não assumir que existem em outro clone e não versionar dumps proprietários.
+- `tools/` (opcional e local): ferramentas externas para investigação de assets; ignoradas pelo Git e não necessárias para instalar o pacote.
+
+## Responsabilidades atuais da CLI
+
+| Comando | Entrada | Resultado | Limites conhecidos |
+|---|---|---|---|
+| `inspect` | Um bundle | Cabeçalho/metadados e hash | Não interpreta todos os objetos internos. |
+| `inventory` | Diretório | Inventário recursivo JSON | Não extrai nem classifica texto. |
+| `template` | Jogo selecionado | Modelo JSON de tradução | Não representa uma extração real. |
+| `text export` | JSON com `textList` | Catálogo traduzível JSON | Não extrai do bundle; reexportação não preserva traduções existentes. |
 
 ## Fluxo pretendido
 
@@ -20,48 +30,54 @@ Bundles originais (somente leitura)
 Inventário + hashes + metadados
           |
           v
-Inspeção de assets com ferramenta compatível
+Extração/inspeção de assets com ferramenta compatível
           |
           v
-Extração de texto e metadados -> JSON versionado
+TextAssets/objetos identificados
           |
           v
-Editor de tradução + validação
+Exportação para catálogo JSON versionado
+          |
+          v
+Mesclagem segura + validação + tradução/revisão
           |
           v
 Importação/reconstrução em cópia de trabalho
           |
           v
-Teste no jogo e relatório de regressões
+Comparação de integridade + teste no jogo
 ```
 
-A extração, a edição visual e a reconstrução ainda são etapas futuras, não funcionalidades disponíveis hoje.
+Somente a inspeção básica, o inventário, o modelo e a exportação de JSON previamente extraído estão implementados. Extração automatizada, merge seguro, validação avançada, editor e reconstrução ainda são etapas futuras.
 
 ## Ferramentas externas
 
-AssetRipper, UABEA e UnityDataTools são ferramentas auxiliares em avaliação. Não são importadas pelo código Python e não devem ser tratadas como dependências obrigatórias. Instale-as separadamente a partir das publicações oficiais e mantenha as distribuições em pastas locais dentro de `tools/`, se conveniente. Consulte [Ferramentas externas](EXTERNAL_TOOLS.md) para obter instruções, práticas de versionamento e registro dos experimentos.
+AssetRipper, UABEA e UnityDataTool são ferramentas auxiliares em avaliação. Não são importadas pelo código Python e não devem ser tratadas como dependências obrigatórias. Instale-as separadamente a partir das fontes oficiais. Consulte [Ferramentas externas](EXTERNAL_TOOLS.md).
 
-O `.gitignore` exclui as pastas locais dessas ferramentas e extensões binárias comuns. Isso evita novos commits de executáveis, mas não elimina automaticamente objetos grandes que já façam parte do histórico Git. Se um push for rejeitado por arquivos grandes, faça backup e limpe o histórico local não publicado; não tente resolver apenas adicionando novas regras ao `.gitignore`.
+O `.gitignore` exclui pastas locais dessas ferramentas e extensões binárias comuns. Isso evita novos commits de executáveis, mas não elimina automaticamente objetos grandes que já façam parte do histórico Git. Se um push for rejeitado por arquivos grandes, faça backup e limpe o histórico local não publicado; não tente resolver apenas adicionando regras ao `.gitignore`.
 
 ## Regras de engenharia
 
 1. **Reversibilidade:** não descartar dados desconhecidos necessários para reconstruir o asset.
 2. **Rastreabilidade:** associar cada entrada ao jogo, asset, identificador e origem quando essas informações forem descobertas.
-3. **Integridade:** manter o texto original separado da tradução e não modificar o original durante a edição.
-4. **Tokens:** representar tokens e variáveis de modo explícito; validar que não sejam removidos ou reordenados sem autorização.
-5. **Limites baseados em evidência:** separar limites confirmados pelo jogo de observações visuais e avisos heurísticos.
-6. **Versionamento:** versionar o esquema JSON e criar migrações quando houver mudanças incompatíveis.
-7. **Testes:** incluir casos válidos, inválidos, truncados, strings vazias, Unicode e dados com tokens.
-8. **Dependências externas:** registrar ferramenta, versão, hash de entrada, parâmetros e resultado; nunca pressupor que a ferramenta preserva todos os dados.
+3. **Integridade:** manter o texto original separado da tradução.
+4. **Tokens:** preservar tokens, variáveis, marcadores e quebras de linha até confirmar sua semântica.
+5. **Limites baseados em evidência:** separar limites confirmados de observações e avisos heurísticos.
+6. **Versionamento:** versionar o esquema JSON e criar migrações para mudanças incompatíveis.
+7. **Testes:** incluir casos válidos, inválidos, Unicode, strings vazias, tokens e IDs duplicados.
+8. **Dependências externas:** registrar ferramenta, versão, hash de entrada, parâmetros e resultado.
+9. **Não destrutivo:** nunca substituir silenciosamente um catálogo com traduções existentes.
+10. **Documentação para IA:** atualizar `docs/AI_CONTEXT.md`, `docs/AI_PROMPTS.md` e este documento quando a arquitetura ou os comandos mudarem.
 
 ## Descoberta de formatos
 
-Avaliar AssetRipper, UABEA e UnityDataTools em cópias dos arquivos. Registrar versão da ferramenta, hash do arquivo de entrada, resultado, limitações e se a operação preserva dados. A assinatura UnityFS não basta para determinar a estrutura interna ou o procedimento seguro de reconstrução.
+A assinatura UnityFS não basta para determinar a estrutura interna ou o procedimento seguro de reconstrução. A descoberta de `text_add_en` está documentada em [Registro de engenharia reversa](REVERSE_ENGINEERING_LOG.md). O marcador `∠` foi observado em entradas de texto, mas seu significado não está confirmado.
 
 ## Critérios para considerar uma etapa concluída
 
-- Há exemplos reproduzíveis e testes automatizados.
+- Existem exemplos reproduzíveis e testes automatizados.
 - Os dados de entrada não são alterados.
-- Os metadados desconhecidos são preservados ou explicitamente documentados.
-- Falhas são apresentadas com mensagens úteis.
-- O resultado foi comparado com o arquivo original por hash e, quando aplicável, testado no jogo.
+- Metadados desconhecidos são preservados ou explicitamente documentados.
+- Falhas apresentam mensagens úteis.
+- O resultado é comparado com a entrada por hash quando aplicável.
+- Qualquer afirmação sobre compatibilidade/reconstrução é apoiada por teste real.

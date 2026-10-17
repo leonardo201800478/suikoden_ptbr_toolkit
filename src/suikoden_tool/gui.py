@@ -382,7 +382,7 @@ class TranslationApp:
                 parent=self.root,
             )
             return
-        tool = Path("tools/UnityDataTools/UnityDataTool.exe")
+        tool = Path(__file__).resolve().parents[2] / "tools" / "UnityDataTools" / "UnityDataTool.exe"
         try:
             executable = resolve_unity_data_tool(tool)
         except ValueError as exc:
@@ -390,7 +390,6 @@ class TranslationApp:
             return
         self.extraction_status.set("Extração em andamento. Os bundles originais não serão alterados.")
         self.extraction_log.delete("1.0", "end")
-        ttk.Button
         threading.Thread(
             target=self._extraction_worker,
             args=(self.selected_bundles, executable),
@@ -398,8 +397,6 @@ class TranslationApp:
         ).start()
 
     def _extraction_worker(self, bundles: tuple[Path, ...], executable: Path) -> None:
-        from suikoden_tool.text_catalog import _write_json
-
         output_dir = Path("work/bundle_analysis").resolve()
         results: list[tuple[Path, Path, str, int]] = []
         errors: list[str] = []

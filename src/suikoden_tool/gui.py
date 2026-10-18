@@ -196,7 +196,7 @@ class TranslationApp:
         right = ttk.Frame(body, style="Panel.TFrame", padding=16)
         right.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
         left.columnconfigure(0, weight=1)
-        left.rowconfigure(3, weight=1)
+        left.rowconfigure(4, weight=1)
         right.columnconfigure(0, weight=1)
         right.rowconfigure(3, weight=1)
 
@@ -215,9 +215,17 @@ class TranslationApp:
             values=("Todas", "Pendentes", "Traduzidas", "Revisadas", "Revisar", "Órfãs"),
         )
         self.status_combo.grid(row=2, column=0, sticky="ew", pady=(0, 8))
+        self.over_limit_only_var = tk.BooleanVar(value=False)
+        self.over_limit_only_check = ttk.Checkbutton(
+            left,
+            text="Somente textos acima de 66 caracteres",
+            variable=self.over_limit_only_var,
+            command=self.refresh_list,
+        )
+        self.over_limit_only_check.grid(row=3, column=0, sticky="w", pady=(0, 8))
 
         tree_frame = ttk.Frame(left, style="Panel.TFrame")
-        tree_frame.grid(row=3, column=0, sticky="nsew")
+        tree_frame.grid(row=4, column=0, sticky="nsew")
         tree_frame.rowconfigure(0, weight=1)
         tree_frame.columnconfigure(0, weight=1)
         self.tree = ttk.Treeview(
@@ -1162,6 +1170,13 @@ class TranslationApp:
             allowed = status_map.get(status_filter)
             if allowed and entry.get("status") not in allowed:
                 continue
+            if self.over_limit_only_var.get():
+                source_text = self._lines_to_markers(translation)
+                if not any(
+                    count > 66
+                    for _, count in self._dialogue_line_lengths(source_text)
+                ):
+                    continue
             self.visible_entries.append(entry)
             iid = self._iid(entry)
             # A lista pode resumir espaços/quebras para caber na coluna, mas o editor

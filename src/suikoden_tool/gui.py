@@ -22,6 +22,7 @@ from suikoden_tool.gui_service import (
     get_catalog_stats,
     load_catalog,
     save_entry,
+    save_entries_bulk,
     suggest_translation,
 )
 from suikoden_tool.dump_catalog_import import import_dump_to_catalog
@@ -911,15 +912,19 @@ class TranslationApp:
                 return
 
             try:
-                for key in importable:
-                    entry = editor_by_id[key]
-                    saved = save_entry(
-                        self.catalog_path,
-                        entry["id"],
-                        translated_entries[key]["text"],
-                        "translated",
-                    )
-                    entry.update(saved)
+                updates = save_entries_bulk(
+                    self.catalog_path,
+                    [
+                        (
+                            editor_by_id[key]["id"],
+                            translated_entries[key]["text"],
+                            "translated",
+                        )
+                        for key in importable
+                    ],
+                )
+                for key, saved in updates.items():
+                    editor_by_id[key].update(saved)
             except (OSError, ValueError) as exc:
                 messagebox.showerror(
                     "Falha durante a importação",

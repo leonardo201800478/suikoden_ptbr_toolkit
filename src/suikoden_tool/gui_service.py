@@ -55,6 +55,41 @@ def save_entry(
     return entry
 
 
+def save_entries_bulk(
+    path: Path,
+    translations: list[tuple[str | int, str, str]],
+) -> dict[tuple[type, object], dict[str, Any]]:
+    """Atualiza várias traduções e grava o catálogo uma única vez."""
+    catalog = load_catalog(path)
+    indexed: dict[tuple[type, object], dict[str, Any]] = {}
+    for entry in catalog["entries"]:
+        key = (type(entry.get("id")), entry.get("id"))
+        if key in indexed:
+            raise ValueError(f"ID duplicado no catálogo: {entry.get('id')!r}.")
+        indexed[key] = entry
+
+    updated: dict[tuple[type, object], dict[str, Any]] = {}
+    for entry_id, translation, status in translations:
+        if status not in {"translated", "reviewed"}:
+            raise ValueError("O status precisa ser 'translated' ou 'reviewed'.")
+        if not translation.strip():
+            raise ValueError(f"A tradução do ID {entry_id!r} não pode ficar vazia.")
+        key = (type(entry_id), entry_id)
+        entry = indexed.get(key)
+        if entry is None:
+            raise ValueError(f"ID não encontrado no catálogo: {entry_id!r}.")
+        if entry.get("status") == "orphaned":
+            raise ValueError(f"A entrada {entry_id!r} é órfã e não pode ser editada.")
+        if entry.get("status") == "needs_review" and status == "translated":
+            raise ValueError(f"A entrada {entry_id!r} precisa ser salva como revisada.")
+        entry["translation"] = translation
+        entry["status"] = status
+        updated[key] = entry
+
+    _atomic_write(path, catalog)
+    return updated
+
+
 def _atomic_write(path: Path, catalog: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.gui.tmp")

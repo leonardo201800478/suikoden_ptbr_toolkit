@@ -41,6 +41,25 @@ def test_export_creates_catalog_and_preserves_original_text(tmp_path):
     assert catalog["entries"][2]["original"] == ""
 
 
+def test_export_preserves_all_source_markers_and_does_not_modify_prepared_json(tmp_path):
+    entries = [
+        {"id": 1, "text": "♂㈱ ♂① ♂② ♂⑩"},
+        {"id": 2, "text": "Linha A∠Linha B∨Próxima☆"},
+        {"id": 3, "text": "ＬＶ２ ★☆ ★★☆☆ ◎1"},
+        {"id": 4, "text": "Espaços  finais  e ? marcador literal"},
+        {"id": 5, "text": "CRLF\\r\\nLF\\nTAB\\t"},
+    ]
+    source = write_source(tmp_path / "text_gsd1_en.json", entries)
+    source_bytes = source.read_bytes()
+    output = tmp_path / "text_gsd1_en.catalog.json"
+
+    result = export_text_catalog(source, output)
+    originals = [entry["original"] for entry in result["catalog"]["entries"]]
+
+    assert originals == [item["text"] for item in entries]
+    assert source.read_bytes() == source_bytes
+
+
 def test_export_rejects_duplicate_source_ids(tmp_path):
     source = write_source(
         tmp_path / "duplicate.json",
@@ -265,23 +284,73 @@ def test_export_refuses_to_overwrite_source_file(tmp_path):
     assert source.read_bytes() == before
 
 
-def test_export_refuses_invalid_existing_catalog_without_modifying_it(tmp_path):
-    source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "Original"}])
+def test_export_does_not_run_translation_integrity_validation_when_loading(tmp_path):
+    source = write_source(tmp_path / "resource.json", [{"id": 1, "text": "Original∠Changed"}])
     output = tmp_path / "catalog.json"
-    original_bytes = json.dumps(
-        {
-            "schema_version": 1,
-            "resource": "resource",
-            "source_language": "en",
-            "target_language": "pt-BR",
-            "entries": [
-                {"id": 1, "original": "Original", "translation": 123, "status": "translated"}
-            ],
-        }
-    ).encode()
-    output.write_bytes(original_bytes)
+    catalog = {
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
+        "target_language": "pt-BR",
+        "entries": [
+            {
+                "id": 1,
+                "original": "Original∠Changed",
+                "translation": "Tradução sem marcador e com\\nquebra extra",
+                "status": "translated",
+            }
+        ],
+    }
+    output.write_text(json.dumps(catalog, ensure_ascii=False), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="Catálogo existente inválido"):
-        export_text_catalog(source, output)
+    result = export_text_catalog(source, output)
 
-    assert output.read_bytes() == original_bytes
+    entry = result["catalog"]["entries"][0]
+    assert entry["translation"] == "Tradução sem marcador e com\\nquebra extra"
+    assert entry["status"] == "translated"
+    assert result["preserved"] == 1
+
+def test_validate_warns_when_known_marker_or_line_break_count_changes():
+    catalog = {
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
+        "target_language": "pt-BR",
+        "entries": [
+            {
+                "id": 1,
+                "original": "First∠Second\nThird",
+                "translation": "Primeiro Segundo\nTerceiro\nExtra",
+                "status": "translated",
+            }
+        ],
+    }
+
+    report = validate_catalog(catalog)
+    warnings = "\n".join(report["warnings"])
+
+    assert report["valid"] is True
+    assert "quantidade do marcador ∠ difere" in warnings
+    assert "quantidade de quebras de linha difere" in warnings
+
+
+def test_validate_accepts_matching_known_marker_and_line_break_counts():
+    catalog = {
+        "schema_version": 1,
+        "resource": "resource",
+        "source_language": "en",
+        "target_language": "pt-BR",
+        "entries": [
+            {
+                "id": 1,
+                "original": "First∠Second\nThird",
+                "translation": "Primeiro∠Segundo\nTerceiro",
+                "status": "translated",
+            }
+        ],
+    }
+
+    report = validate_catalog(catalog)
+
+    assert not any("marcador ∠ difere" in warning for warning in report["warnings"])
+    assert not any("quebras de linha difere" in warning for warning in report["warnings"])

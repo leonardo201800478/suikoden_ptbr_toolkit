@@ -23,6 +23,27 @@ tools/
 
 Os nomes de pastas são convenções locais; os executáveis podem variar entre versões. Registre a versão usada nos relatórios de teste. Não presuma que uma ferramenta é compatível apenas porque consegue abrir o arquivo.
 
+## Integração com o toolkit
+
+O comando `suikoden-tool text extract` chama a CLI do UnityDataTool sem shell, usando argumentos separados. O executável é resolvido nesta ordem:
+
+1. caminho passado em `--tool`;
+2. variável de ambiente `UNITY_DATA_TOOL`;
+3. executável `UnityDataTool.exe`/`UnityDataTool` disponível no `PATH`;
+4. `tools/UnityDataTools/UnityDataTool.exe` relativo ao diretório de trabalho.
+
+A extração usa `serialized-file objectlist --format json` para localizar objetos `TextAsset` e `dump --objectid ... --stdout` para ler `m_Name` e `m_Script`. Só grava a saída se `m_Script` for JSON com uma lista `textList`; quando houver vários recursos compatíveis, é obrigatório indicar `--asset-name`. Para bundles com mais de um SerializedFile, informe `--entry`.
+
+Exemplo:
+
+```powershell
+suikoden-tool text extract --bundle "C:\\jogo\\arquivo.bundle" --output work\\text.json --asset-name text_add_en
+```
+
+A integração ainda precisa de validação local contra a versão 2.4.0 e os bundles reais do projeto. O formato textual do dump pode variar entre versões; se a extração falhar, não edite nem substitua o bundle original. A extração não implementa reinserção.
+
+Referência da CLI: [documentação oficial do UnityDataTool](https://github.com/Unity-Technologies/UnityDataTools/blob/main/Documentation/command-dump.md).
+
 ## Versionamento e arquivos grandes
 
 As pastas locais acima são ignoradas pelo `.gitignore`. Isso é intencional:

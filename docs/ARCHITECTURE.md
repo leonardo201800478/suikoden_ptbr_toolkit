@@ -8,6 +8,8 @@ O pacote usa a estrutura `src/`:
 - `src/suikoden_tool/translation_schema.py`: construtor de uma entrada para o esquema inicial de tradução.
 - `src/suikoden_tool/cli.py`: CLI com inspeção, inventário, catálogo, validação, estatísticas e operações CSV em lote.
 - `src/suikoden_tool/text_batch.py`: exportação/importação CSV com validação integral antes da gravação.
+- `src/suikoden_tool/unity_text_extractor.py`: integração opcional com UnityDataTool para localizar e extrair `m_Script` de um `TextAsset` com JSON `textList`.
+- `src/suikoden_tool/text_discovery.py`: inventário em lote de TextAssets, amostras e contagens de `textList` para classificar recursos.
 - `tests/`: testes automatizados, incluindo exportação de catálogos.
 - `data/`: modelos iniciais versionáveis.
 - `work/`: resultados locais de investigação; não assumir que existem em outro clone e não versionar dumps proprietários.
@@ -20,6 +22,8 @@ O pacote usa a estrutura `src/`:
 | `inspect` | Um bundle | Cabeçalho/metadados e hash | Não interpreta todos os objetos internos. |
 | `inventory` | Diretório | Inventário recursivo JSON | Não extrai nem classifica texto. |
 | `template` | Jogo selecionado | Modelo JSON de tradução | Não representa uma extração real. |
+| `text discover` | Diretório de bundles + UnityDataTool | Relatório JSON com nomes de TextAssets, contagens e amostras | Descoberta e classificação preliminar; não altera os bundles. |
+| `text extract` | Bundle + UnityDataTool + seleção opcional de entrada/asset | JSON extraído de um `TextAsset` | Depende do formato do dump; não altera o bundle e recusa sobrescrever saída sem `--force`. |
 | `text export` | JSON com `textList` + saída opcional existente | Cria/mescla catálogo JSON | Preserva traduções compatíveis; marca origem alterada e IDs órfãos. |
 | `text validate` | Catálogo + fonte opcional | Relatório JSON de erros/avisos | Não modifica arquivos. |
 | `text stats` | Catálogo JSON | Contagem por status e percentual concluído | Não modifica arquivos. |\n| `text batch-export` | Catálogo JSON | CSV UTF-8 com BOM para Excel | Exporta até o limite configurado; por padrão inclui `pending` e `needs_review`. |\n| `text batch-import` | CSV + catálogo JSON | Atualiza traduções correspondentes | Valida IDs e texto original; células vazias não apagam traduções; `needs_review` é preservado. |
@@ -51,7 +55,7 @@ Importação/reconstrução em cópia de trabalho
 Comparação de integridade + teste no jogo
 ```
 
-A inspeção básica, o inventário, o modelo, a exportação de JSON previamente extraído, a mesclagem segura, a validação estrutural, as estatísticas e o fluxo CSV em lote estão implementados. Extração automatizada, validação semântica de tokens, editor gráfico e reconstrução ainda são etapas futuras.
+A inspeção básica, o inventário, o modelo, a extração experimental de TextAssets via UnityDataTool, a exportação/mesclagem de catálogos, a validação estrutural, avisos conservadores sobre diferenças na quantidade de `∠` e quebras de linha, as estatísticas, o fluxo CSV em lote e o editor gráfico estão implementados. A extração automatizada ainda precisa de validação local com a versão externa e bundles reais; interpretação semântica dos marcadores e reconstrução permanecem etapas futuras.
 
 ## Ferramentas externas
 

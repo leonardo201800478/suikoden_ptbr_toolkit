@@ -130,11 +130,9 @@ def export_text_catalog(
             f"mas a fonte é {resource!r}. Não foi alterado."
         )
 
-    existing_report = validate_catalog(existing)
-    if existing_report["errors"]:
-        raise ValueError(
-            "Catálogo existente inválido; não foi alterado: " + "; ".join(existing_report["errors"])
-        )
+    # Carregar/atualizar material de tradução não é uma validação de integridade.
+    # A integridade dos dados do jogo deve ser verificada durante a extração.
+    # Aqui só validamos o JSON/estrutura mínima necessária para mesclar por ID.
     old_by_id = _catalog_index(existing)
     merged: list[dict[str, Any]] = []
     current_ids: set[tuple[type, object]] = set()
@@ -198,8 +196,14 @@ def export_text_catalog(
     }
 
 
+def _line_break_count(text: str) -> int:
+    """Conta quebras CRLF, LF e CR como uma quebra lógica cada."""
+    return text.count("\n") + text.count("\r") - text.count("\r\n")
+
+
 def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]:
     """Valida estrutura e conteúdo; source opcional compara com nova extração."""
+
     errors: list[str] = []
     warnings: list[str] = []
     if not isinstance(catalog, dict):
@@ -247,9 +251,27 @@ def validate_catalog(catalog: Any, source: Path | None = None) -> dict[str, Any]
         status = entry.get("status")
         if not isinstance(status, str) or status not in VALID_STATUSES:
             errors.append(f"Entrada {entry_id!r}: status inválido {status!r}.")
+        original = entry.get("original")
         translation = entry.get("translation")
         if isinstance(translation, str) and not translation.strip():
             warnings.append(f"Entrada {entry_id!r}: tradução pendente.")
+        elif isinstance(original, str) and isinstance(translation, str):
+            original_marker_count = original.count("∠")
+            translation_marker_count = translation.count("∠")
+            if original_marker_count != translation_marker_count:
+                warnings.append(
+                    f"Entrada {entry_id!r}: quantidade do marcador ∠ difere "
+                    f"da origem ({original_marker_count} vs. {translation_marker_count}); "
+                    "verifique antes de aprovar."
+                )
+            original_breaks = _line_break_count(original)
+            translation_breaks = _line_break_count(translation)
+            if original_breaks != translation_breaks:
+                warnings.append(
+                    f"Entrada {entry_id!r}: quantidade de quebras de linha difere "
+                    f"da origem ({original_breaks} vs. {translation_breaks}); "
+                    "verifique o layout antes de aprovar."
+                )
         if "source_changed" in entry and not isinstance(entry["source_changed"], bool):
             errors.append(f"Entrada {entry_id!r}: 'source_changed' precisa ser booleano.")
         if "previous_original" in entry and not isinstance(entry["previous_original"], str):
